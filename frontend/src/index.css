@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Warm neutral "sand" scale */
+  --color-sand-25: #fdfcfa;
+  --color-sand-50: #faf8f4;
+  --color-sand-100: #f3efe7;
+  --color-sand-200: #e7e1d5;
+  --color-sand-300: #d6cebf;
+  --color-sand-400: #a99f8e;
+  --color-sand-500: #7d7465;
+  --color-sand-600: #5e574b;
+  --color-sand-700: #433e36;
+  --color-sand-800: #2b2823;
+  --color-sand-900: #1b1916;
+
+  /* Primary: deep Atlas green */
+  --color-atlas-50: #edf7f2;
+  --color-atlas-100: #d3ecdf;
+  --color-atlas-200: #a8d8c0;
+  --color-atlas-300: #73bd9a;
+  --color-atlas-400: #3f9c74;
+  --color-atlas-500: #1f805a;
+  --color-atlas-600: #146b4b;
+  --color-atlas-700: #0b5c42;
+  --color-atlas-800: #0a4835;
+  --color-atlas-900: #08382a;
+
+  /* Accent: terracotta clay */
+  --color-clay-50: #fdf2ec;
+  --color-clay-100: #fadfd1;
+  --color-clay-200: #f3bea3;
+  --color-clay-400: #dc7a52;
+  --color-clay-500: #c9603a;
+  --color-clay-600: #ad4c2b;
+  --color-clay-700: #8b3c23;
+
+  /* Stars: saffron */
+  --color-saffron-50: #fff8e6;
+  --color-saffron-100: #feedbf;
+  --color-saffron-400: #f2b52b;
+  --color-saffron-500: #e3a008;
+  --color-saffron-600: #b97f04;
+  --color-saffron-700: #8a5d06;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    @apply bg-sand-50 text-sand-900 antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-atlas-500);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-atlas-100);
+  }
+}
+
+@utility card {
+  @apply min-w-0 rounded-2xl border border-sand-200 bg-white;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-md {
+  @apply rounded-xl px-4 py-2.5 text-sm;
+}
+@utility btn-sm {
+  @apply rounded-lg px-3 py-1.5 text-[13px];
+}
+@utility btn-lg {
+  @apply rounded-xl px-5 py-3 text-[15px];
+}
+@utility btn-primary {
+  @apply btn bg-atlas-700 text-white hover:bg-atlas-800 active:bg-atlas-900;
+}
+@utility btn-accent {
+  @apply btn bg-clay-500 text-white hover:bg-clay-600;
+}
+@utility btn-secondary {
+  @apply btn border border-sand-300 bg-white text-sand-800 hover:border-sand-400 hover:bg-sand-50;
+}
+@utility btn-ghost {
+  @apply btn text-sand-700 hover:bg-sand-100;
+}
+@utility input {
+  @apply w-full rounded-xl border border-sand-300 bg-white px-3.5 py-2.5 text-sm text-sand-900 transition-colors placeholder:text-sand-400 focus:border-atlas-500 focus:ring-3 focus:ring-atlas-100 focus:outline-none;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-semibold text-sand-800;
+}
+@utility hint {
+  @apply mt-1 text-xs text-sand-500;
+}
+@utility eyebrow {
+  @apply text-xs font-bold tracking-[0.12em] text-atlas-700 uppercase;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-sand-200 bg-sand-50 px-2.5 py-0.5 text-xs font-medium text-sand-700;
+}
+@utility tab {
+  @apply relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-sand-600 transition-colors hover:text-sand-900 aria-selected:bg-white aria-selected:text-sand-900 aria-selected:shadow-sm aria-selected:ring-1 aria-selected:ring-sand-200;
+}
+
+.prose-civic > * + * {
+  margin-top: 0.75rem;
+}
+
+/* Subtle zellige-inspired 8-point star pattern */
+.zellige {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%230b5c42' stroke-opacity='0.07' stroke-width='1.2'%3E%3Crect x='18' y='18' width='20' height='20'/%3E%3Crect x='18' y='18' width='20' height='20' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 0l8 8M56 0l-8 8M0 56l8-8M56 56l-8-8'/%3E%3C/g%3E%3C/svg%3E");
+}
+.zellige-light {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='1.2'%3E%3Crect x='18' y='18' width='20' height='20'/%3E%3Crect x='18' y='18' width='20' height='20' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 0l8 8M56 0l-8 8M0 56l8-8M56 56l-8-8'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes star-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.star-pop {
+  animation: star-pop 320ms ease-out;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-up {
+  animation: fade-up 220ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .star-pop, .fade-up { animation: none; }
+}
+
+/* Leaflet: keep map below sticky headers and fit the theme */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--color-sand-100);
+  z-index: 0;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 14px;
+}

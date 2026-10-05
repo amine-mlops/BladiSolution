@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------------
+# BladiSolution
+# ---------------------------------------------------------------------------
+
+# --- Secrets & local config (never commit) -------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python (backend) ------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Local databases & user uploads
+*.db
+*.sqlite3
+backend/uploads/
+
+# --- Node (frontend, demo) ---------------------------------------------------
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Demo video recorder ---------------------------------------------------
+# Piper TTS virtualenv (~170 MB) and downloaded voice model (~110 MB)
+demo/.tts/
+demo/voices/
+# Generated voice clips and recorded videos (large binaries; share the video via a release or drive link)
+demo/narration/
+demo/output/
+
+# --- Logs ------------------------------------------------------------------
+*.log
+logs/
+
+# --- Editors & OS ----------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

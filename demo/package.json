@@ -1,0 +1,16 @@
+{
+  "name": "bladisolution-demo",
+  "private": true,
+  "type": "module",
+  "description": "Records a narrated walkthrough video of BladiSolution with Playwright",
+  "scripts": {
+    "postinstall": "playwright-core install ffmpeg",
+    "check": "DRY=1 node record-demo.mjs",
+    "voice": ".tts/bin/python synth.py",
+    "record": "DRY=1 node record-demo.mjs && .tts/bin/python synth.py && node record-demo.mjs",
+    "record:silent": "VOICE=0 node record-demo.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}
