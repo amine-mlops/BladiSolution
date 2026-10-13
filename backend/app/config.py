@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    app_name: str = "BladiSolution"
+    app_name: str = "BladiSolution Campus"
     environment: str = "development"
 
     database_url: str = "postgresql+psycopg://bladi:bladi@localhost:5433/bladisolution"
@@ -33,9 +33,13 @@ class Settings(BaseSettings):
 
     # Rate limiting
     rate_limit_enabled: bool = True
+    # Use X-Forwarded-For to identify clients. Only enable behind a proxy that sets it
+    # (the Docker Compose nginx does); otherwise clients could spoof it to dodge limits.
+    trust_forwarded_for: bool = False
 
-    # Seed the demo database on startup when it is empty
-    seed_on_startup: bool = True
+    # Load the fictional demo dataset on startup when the database is empty. Off by default
+    # so a real deployment never shows made-up people, stars or partnerships.
+    seed_on_startup: bool = False
 
 
 @lru_cache

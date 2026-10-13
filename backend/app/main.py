@@ -14,6 +14,7 @@ from . import db as dbmod
 from .config import get_settings
 from .constants import CATEGORIES
 from .db import Base
+from .migrations import run_migrations
 from .models import Category, User
 from .routers import ai, auth, dashboard, discover, moderation, notifications, problems, solutions, uploads, users
 
@@ -44,11 +45,12 @@ def init_db(seed: bool | None = None) -> None:
                 for k, v in fields.items():
                     setattr(row, k, v)
         db.commit()
+        run_migrations(dbmod.engine, db)
         should_seed = get_settings().seed_on_startup if seed is None else seed
         if should_seed and db.scalar(select(User.id).limit(1)) is None:
             from .seed import seed_demo
 
-            log.info("Empty database: loading BladiSolution demo data…")
+            log.info("Empty database and SEED_ON_STARTUP=true: loading the demo dataset…")
             seed_demo(db)
 
 
@@ -61,9 +63,9 @@ async def lifespan(app: FastAPI):
 
 settings = get_settings()
 app = FastAPI(
-    title="BladiSolution API",
-    description="Open civic innovation platform: local problems → community solutions → implementation.",
-    version="1.0.0",
+    title="BladiSolution Campus API",
+    description="Real problems, community solutions ranked by stars, and a path to implementation.",
+    version="1.1.0",
     lifespan=lifespan,
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",

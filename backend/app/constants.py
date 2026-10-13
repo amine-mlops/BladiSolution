@@ -2,9 +2,21 @@
 
 ROLES = ["citizen", "talent", "organization", "municipality", "admin"]
 ORG_ROLES = {"organization", "municipality", "admin"}
+# Organization roles may act on solutions only once a moderator has verified the account
+# (see security.can_decide); admins always can.
 DECISION_ROLES = {"municipality", "organization", "admin"}
+# Roles a person can pick for themselves when registering. "municipality" accounts are
+# organizations with org_kind="municipality" and are never self-assigned.
+SELF_SERVICE_ROLES = {"citizen", "talent", "organization"}
 
-ORG_KINDS = ["startup", "ngo", "association", "university_club", "research_lab", "company", "municipality", "institution"]
+# Kinds of support an organization can offer a solution (expressions of interest only;
+# nothing here commits money or implies approval).
+INTEREST_KINDS = ["implementation", "sponsorship", "mentorship"]
+
+ORG_KINDS = [
+    "university", "company", "startup", "incubator", "foundation", "ngo", "association", "university_club",
+    "research_lab", "institution", "municipality",
+]
 
 PROBLEM_STATUSES = ["open", "under_review", "in_progress", "solved", "archived"]
 SOLUTION_STATUSES = ["proposed", "developing", "under_evaluation", "selected", "implemented"]
@@ -16,86 +28,32 @@ LEVELS = ["low", "medium", "high", "critical"]
 REPORT_REASONS = ["spam", "harassment", "inappropriate", "misinformation", "duplicate", "other"]
 REPORT_TARGETS = ["problem", "solution", "comment", "user"]
 
+# Problem domains for BladiSolution Campus. They are deliberately broad: a student can
+# post a national agriculture issue as easily as a campus accessibility one.
 CATEGORIES = [
+    {
+        "slug": "technology",
+        "name": "Technology & Digital",
+        "icon": "cpu",
+        "color": "#4f46e5",
+        "description": "Software, data, connectivity, digital tools and cybersecurity.",
+        "skills": ["Web Development", "Mobile Development", "Data Science", "Cybersecurity", "UX Design"],
+    },
+    {
+        "slug": "environment",
+        "name": "Environment & Sustainability",
+        "icon": "leaf",
+        "color": "#16a34a",
+        "description": "Waste, water, air quality, green spaces, climate and biodiversity.",
+        "skills": ["Environmental Engineering", "Data Science", "IoT", "Urban Planning", "Hydrology"],
+    },
     {
         "slug": "transportation",
         "name": "Transportation & Mobility",
         "icon": "bus",
         "color": "#2563eb",
         "description": "Public transport, traffic, road safety, cycling and walkability.",
-        "skills": ["GIS", "Data Science", "Transport Planning", "IoT", "Mobile Development", "Machine Learning"],
-    },
-    {
-        "slug": "governance",
-        "name": "Smart Governance",
-        "icon": "landmark",
-        "color": "#7c3aed",
-        "description": "Digital public services, transparency and citizen participation.",
-        "skills": ["Web Development", "UX Design", "Public Policy", "Data Engineering", "Cybersecurity"],
-    },
-    {
-        "slug": "education",
-        "name": "Education",
-        "icon": "graduation-cap",
-        "color": "#0891b2",
-        "description": "Schools, digital literacy, tutoring and lifelong learning.",
-        "skills": ["Teaching", "EdTech", "Content Design", "Web Development", "Community Organizing"],
-    },
-    {
-        "slug": "social-inclusion",
-        "name": "Social Inclusion",
-        "icon": "hand-heart",
-        "color": "#db2777",
-        "description": "Accessibility, youth, women, elderly and vulnerable communities.",
-        "skills": ["Social Work", "Accessibility", "Community Organizing", "UX Design", "Public Policy"],
-    },
-    {
-        "slug": "tourism-heritage",
-        "name": "Tourism & Cultural Heritage",
-        "icon": "landmark-dome",
-        "color": "#b45309",
-        "description": "Medinas, monuments, artisans and visitor experience.",
-        "skills": ["Heritage Conservation", "Marketing", "Mobile Development", "3D / AR", "Tourism Management"],
-    },
-    {
-        "slug": "economic-development",
-        "name": "Economic Development",
-        "icon": "briefcase",
-        "color": "#ca8a04",
-        "description": "Youth employment, entrepreneurship, informal economy and local commerce.",
-        "skills": ["Entrepreneurship", "Finance", "Marketing", "Web Development", "Training"],
-    },
-    {
-        "slug": "environment",
-        "name": "Environmental Sustainability",
-        "icon": "leaf",
-        "color": "#16a34a",
-        "description": "Green spaces, air quality, water, climate resilience and biodiversity.",
-        "skills": ["Environmental Engineering", "Data Science", "IoT", "Urban Planning", "Hydrology"],
-    },
-    {
-        "slug": "energy",
-        "name": "Energy Efficiency",
-        "icon": "zap",
-        "color": "#eab308",
-        "description": "Solar, public lighting, building efficiency and energy access.",
-        "skills": ["Electrical Engineering", "Solar Energy", "IoT", "Data Science", "Embedded Systems"],
-    },
-    {
-        "slug": "urban-planning",
-        "name": "Urban Planning",
-        "icon": "building-2",
-        "color": "#475569",
-        "description": "Public spaces, housing, land use and neighbourhood design.",
-        "skills": ["Urban Planning", "Architecture", "GIS", "Civil Engineering", "Community Organizing"],
-    },
-    {
-        "slug": "waste",
-        "name": "Waste Management",
-        "icon": "recycle",
-        "color": "#0d9488",
-        "description": "Collection, recycling, illegal dumping and circular economy.",
-        "skills": ["IoT", "Machine Learning", "Logistics", "GIS", "Environmental Engineering", "Community Organizing"],
+        "skills": ["GIS", "Data Science", "Transport Planning", "IoT", "Mobile Development"],
     },
     {
         "slug": "healthcare",
@@ -106,16 +64,83 @@ CATEGORIES = [
         "skills": ["Public Health", "Medicine", "Data Science", "Mobile Development", "Logistics"],
     },
     {
-        "slug": "public-safety",
-        "name": "Public Safety & Security",
-        "icon": "shield",
-        "color": "#ea580c",
-        "description": "Street lighting, road hazards, emergency response and safe public spaces.",
-        "skills": ["Computer Vision", "IoT", "Urban Planning", "Data Science", "Civil Engineering"],
+        "slug": "agriculture",
+        "name": "Agriculture & Food",
+        "icon": "wheat",
+        "color": "#a16207",
+        "description": "Farming, irrigation, food supply chains, food waste and rural livelihoods.",
+        "skills": ["Agronomy", "IoT", "Hydrology", "Supply Chain", "Data Science"],
+    },
+    {
+        "slug": "energy",
+        "name": "Energy",
+        "icon": "zap",
+        "color": "#ca8a04",
+        "description": "Solar, efficiency, public lighting and access to energy.",
+        "skills": ["Electrical Engineering", "Solar Energy", "IoT", "Embedded Systems", "Data Science"],
+    },
+    {
+        "slug": "governance",
+        "name": "Public Services & Governance",
+        "icon": "landmark",
+        "color": "#7c3aed",
+        "description": "Administration, public safety, urban services, transparency and participation.",
+        "skills": ["Web Development", "UX Design", "Public Policy", "Urban Planning", "Data Engineering"],
+    },
+    {
+        "slug": "business",
+        "name": "Business & Entrepreneurship",
+        "icon": "briefcase",
+        "color": "#0f766e",
+        "description": "Employment, small business, tourism, commerce and access to finance.",
+        "skills": ["Entrepreneurship", "Finance", "Marketing", "Web Development", "Training"],
+    },
+    {
+        "slug": "education",
+        "name": "Education & Campus",
+        "icon": "graduation-cap",
+        "color": "#0891b2",
+        "description": "Schools, universities, campus life, learning and digital literacy.",
+        "skills": ["Teaching", "EdTech", "Content Design", "Web Development", "Community Organizing"],
+    },
+    {
+        "slug": "social-impact",
+        "name": "Social Impact & Accessibility",
+        "icon": "hand-heart",
+        "color": "#db2777",
+        "description": "Accessibility, inclusion, youth, women, elderly and vulnerable communities.",
+        "skills": ["Social Work", "Accessibility", "Community Organizing", "UX Design", "Public Policy"],
+    },
+    {
+        "slug": "other",
+        "name": "Other",
+        "icon": "circle-dot",
+        "color": "#64748b",
+        "description": "Anything that doesn't fit the domains above.",
+        "skills": [],
     },
 ]
 CATEGORY_SLUGS = [c["slug"] for c in CATEGORIES]
 CATEGORY_BY_SLUG = {c["slug"]: c for c in CATEGORIES}
+
+# Categories used by the original prototype, mapped onto the current domains. Used to
+# migrate stored rows and to keep old API clients and links working.
+LEGACY_CATEGORY_MAP = {
+    "waste": "environment",
+    "urban-planning": "governance",
+    "public-safety": "governance",
+    "economic-development": "business",
+    "tourism-heritage": "business",
+    "social-inclusion": "social-impact",
+}
+
+
+def canonical_category(slug: str | None) -> str | None:
+    """Map a legacy category slug to the current domain; other values pass through."""
+    if slug is None:
+        return None
+    return LEGACY_CATEGORY_MAP.get(slug, slug)
+
 
 # City centres used for the map and for location extraction.
 CITIES = {

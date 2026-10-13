@@ -6,6 +6,8 @@ import {
   Building2,
   Bus,
   Circle,
+  CircleDot,
+  Cpu,
   GraduationCap,
   HandHeart,
   HeartPulse,
@@ -15,6 +17,7 @@ import {
   Loader2,
   Recycle,
   Shield,
+  Wheat,
   X,
   Zap,
   type LucideIcon,
@@ -71,6 +74,9 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   recycle: Recycle,
   'heart-pulse': HeartPulse,
   shield: Shield,
+  cpu: Cpu,
+  wheat: Wheat,
+  'circle-dot': CircleDot,
 }
 
 export function CategoryIcon({ icon, className }: { icon: string; className?: string }) {

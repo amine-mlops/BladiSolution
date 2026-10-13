@@ -1,13 +1,15 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from datetime import timedelta
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response
 from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..constants import DECISION_ROLES
+from ..constants import canonical_category
 from ..db import get_db
 from ..models import Comment, Problem, ProblemFollower, ProblemSupport, Solution, SolutionContributor, Tag, User, utcnow
 from ..schemas import CommentIn, ProblemIn, ProblemUpdate, SolutionIn
-from ..security import get_current_user, get_optional_user, rate_limit
+from ..security import can_decide, get_current_user, get_optional_user, rate_limit
 from ..serializers import comment_out, problem_out, problem_state, problems_out, solution_out, solutions_out
 from ..services import events
 from ..services.ai import get_local_ai
@@ -19,11 +21,14 @@ router = APIRouter(prefix="/problems", tags=["problems"])
 
 PROBLEM_SORTS = {"trending", "latest", "supported", "discussed", "solutions", "unsolved"}
 SOLUTION_SORTS = {"top", "latest", "discussed", "implemented", "trending"}
+# A second identical submission by the same person inside this window is treated as an
+# accidental double click and returns the first one instead of creating a copy.
+DUPLICATE_WINDOW = timedelta(minutes=10)
 
 
 def _filtered(stmt, category, city, neighborhood, status, official, q):
     if category:
-        stmt = stmt.where(Problem.category == category)
+        stmt = stmt.where(Problem.category == canonical_category(category))
     if city:
         stmt = stmt.where(Problem.city == city)
     if neighborhood:
@@ -79,8 +84,8 @@ def list_problems(
             "supported": [desc(Problem.supporters_count), desc(Problem.created_at)],
             "discussed": [desc(Problem.comments_count + Problem.solutions_count), desc(Problem.last_activity_at)],
             "solutions": [desc(Problem.solutions_count), desc(Problem.supporters_count)],
-            "unsolved": [Problem.solutions_count.asc(), desc(Problem.supporters_count)],
-        }[sort]
+            "unsolved": [Problem.solutions_count.asc(), desc(Problem.supporters_count), desc(Problem.created_at)],
+        }[sort] + [desc(Problem.id)]  # deterministic order for ties
         items, total = page.apply(db, stmt.order_by(*order))
     return page.envelope(problems_out(db, viewer, items), total)
 
@@ -102,15 +107,30 @@ def problems_map(category: str | None = None, city: str | None = None, db: Sessi
 def create_problem(
     body: ProblemIn,
     background: BackgroundTasks,
+    response: Response,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    recent = db.scalar(
+        select(Problem)
+        .where(
+            Problem.author_id == user.id,
+            func.lower(Problem.title) == body.title.lower(),
+            Problem.created_at >= utcnow() - DUPLICATE_WINDOW,
+        )
+        .order_by(desc(Problem.id))
+        .limit(1)
+    )
+    if recent is not None:
+        response.status_code = 200
+        return problem_out(recent, problem_state(db, user, [recent.id]), full=True)
+
     analysis = get_local_ai().analyze_problem(body.title, body.description, body.city)
     p = Problem(
         title=body.title,
         description=body.description,
         category=body.category,
-        city=body.city,
+        city=body.city or "",
         neighborhood=body.neighborhood,
         location=body.location,
         lat=body.lat,
@@ -118,7 +138,7 @@ def create_problem(
         impact=body.impact,
         urgency=body.urgency,
         image_url=body.image_url,
-        is_official=body.is_official and user.role in DECISION_ROLES,
+        is_official=body.is_official and can_decide(user),
         author_id=user.id,
         ai_analysis=analysis,
         affected_population=analysis.get("affected_estimate"),
@@ -147,7 +167,7 @@ def get_problem(problem_id: int, db: Session = Depends(get_db), viewer: User | N
     )
     out["solution_status_counts"] = counts
     out["can_edit"] = bool(viewer and (viewer.id == p.author_id or viewer.role == "admin"))
-    out["can_manage_status"] = bool(viewer and (viewer.role in DECISION_ROLES or viewer.id == p.author_id))
+    out["can_manage_status"] = bool(viewer and (can_decide(viewer) or viewer.id == p.author_id))
     return out
 
 
@@ -155,7 +175,7 @@ def get_problem(problem_id: int, db: Session = Depends(get_db), viewer: User | N
 def update_problem(problem_id: int, body: ProblemUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     p = get_problem_or_404(db, problem_id, user)
     is_author = user.id == p.author_id
-    is_decider = user.role in DECISION_ROLES
+    is_decider = can_decide(user)
     data = body.model_dump(exclude_unset=True)
     content_fields = {k for k in data if k != "status"}
     if content_fields and not (is_author or user.role == "admin"):
@@ -275,7 +295,7 @@ def problem_solutions(
             "latest": [desc(Solution.created_at)],
             "discussed": [desc(Solution.comments_count), desc(Solution.last_activity_at)],
             "implemented": [desc(Solution.decided_at), desc(Solution.stars_count)],
-        }[sort]
+        }[sort] + [desc(Solution.id)]  # deterministic order for ties
         items, total = page.apply(db, stmt.order_by(*order))
     return page.envelope(solutions_out(db, viewer, items), total)
 
@@ -285,20 +305,36 @@ def create_solution(
     problem_id: int,
     body: SolutionIn,
     background: BackgroundTasks,
+    response: Response,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     p = get_problem_or_404(db, problem_id, user)
     if p.status in ("archived", "solved"):
         raise HTTPException(409, "This problem is closed to new solutions.")
+    # Different solutions to the same problem are welcome; the same one twice in a row is not.
+    recent = db.scalar(
+        select(Solution)
+        .where(
+            Solution.problem_id == p.id,
+            Solution.author_id == user.id,
+            func.lower(Solution.title) == body.title.lower(),
+            Solution.created_at >= utcnow() - DUPLICATE_WINDOW,
+        )
+        .order_by(desc(Solution.id))
+        .limit(1)
+    )
+    if recent is not None:
+        response.status_code = 200
+        return solution_out(recent, full=True)
     s = Solution(
         problem_id=p.id,
         author_id=user.id,
         title=body.title,
         description=body.description,
-        approach=body.approach,
-        impact=body.impact,
-        implementation_plan=body.implementation_plan,
+        approach=body.approach or "",
+        impact=body.impact or "",
+        implementation_plan=body.implementation_plan or "",
         required_skills=body.required_skills,
         resources=body.resources,
         estimated_cost=body.estimated_cost,

@@ -45,6 +45,7 @@ export function StarButton({
 
   const toggle = () => {
     if (!requireAuth()) return
+    if (m.isPending) return // one request at a time; the server is idempotent but order matters for the UI
     const next = !state.starred
     setState((s) => ({ starred: next, count: s.count + (next ? 1 : -1) })) // optimistic
     if (next) setPop((p) => p + 1)
@@ -191,7 +192,7 @@ export function ShareButton({ title, path, size = 'md' }: { title: string; path:
     const url = `${window.location.origin}${path}`
     if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
       try {
-        await navigator.share({ title: `${title} · BladiSolution`, url })
+        await navigator.share({ title: `${title} · BladiSolution Campus`, url })
         return
       } catch {
         /* cancelled → fall back to copy */

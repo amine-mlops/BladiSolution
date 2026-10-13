@@ -50,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user: data ?? null,
       loading: isLoading,
-      isDecisionMaker: !!data && DECISION_ROLES.includes(data.role),
+      // Organizations get decision rights only once a moderator has verified them (enforced server-side too).
+      isDecisionMaker: !!data && DECISION_ROLES.includes(data.role) && (data.verified || data.role === 'admin'),
       login: async (email, password) => afterAuth((await api.post<{ user: Me }>('/auth/login', { email, password })).user),
       register: async (body) => afterAuth((await api.post<{ user: Me }>('/auth/register', body)).user),
       logout: async () => {

@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Comment, Problem, Report, Solution, User
-from ..schemas import ReportIn, ReportResolve
+from ..schemas import OrgVerification, ReportIn, ReportResolve
 from ..security import get_current_user, rate_limit, require_admin
 from ..serializers import iso, user_brief
+from ..services import events
 
 router = APIRouter(tags=["moderation"])
 
@@ -88,6 +89,32 @@ def resolve_report(report_id: int, body: ReportResolve, db: Session = Depends(ge
         other.resolved_by_id = admin.id
     db.commit()
     return {"ok": True}
+
+
+@router.get("/moderation/organizations")
+def list_organizations(status: str = "pending", db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """Organization accounts waiting for verification (or already verified)."""
+    stmt = select(User).where(User.role.in_(["organization", "municipality"]), User.is_hidden.is_(False))
+    stmt = stmt.where(User.verified.is_(status == "verified"))
+    rows = db.scalars(stmt.order_by(desc(User.created_at), desc(User.id)).limit(200))
+    return [{**user_brief(u), "email": u.email, "created_at": iso(u.created_at)} for u in rows]
+
+
+@router.post("/moderation/organizations/{user_id}")
+def verify_organization(user_id: int, body: OrgVerification, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    u = db.get(User, user_id)
+    if u is None or u.role not in ("organization", "municipality"):
+        raise HTTPException(404, "Organization not found.")
+    if u.verified != body.verified:
+        u.verified = body.verified
+        if body.verified:
+            events.notify(
+                db, u.id, admin, "organization_verified",
+                "Your organization account is verified. You can now express interest in solutions and update their status.",
+                "/solutions?sort=top",
+            )
+    db.commit()
+    return {**user_brief(u), "email": u.email, "created_at": iso(u.created_at)}
 
 
 @router.delete("/comments/{comment_id}", status_code=204)

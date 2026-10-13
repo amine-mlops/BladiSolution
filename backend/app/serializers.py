@@ -26,6 +26,7 @@ def user_brief(u: User | None) -> dict | None:
         "role": u.role,
         "org_kind": u.org_kind,
         "headline": u.headline,
+        "affiliation": u.affiliation,
         "city": u.city,
         "avatar_url": u.avatar_url,
         "verified": u.verified,

@@ -1,9 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronRight, Landmark, Lightbulb, MapPin, Pencil, Plus, Trash2, Users } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
+import { CalendarDays, ChevronRight, Landmark, Lightbulb, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { FollowProblemButton, ReportButton, ShareButton, SupportButton } from '../components/actions'
-import { AnalysisCard, ContributorMatches } from '../components/ai'
 import { SolutionCard } from '../components/cards'
 import { CommentThread } from '../components/comments'
 import { Page } from '../components/Layout'
@@ -15,11 +14,9 @@ import {
   EmptyState,
   ErrorState,
   Field,
-  LevelMeter,
   Modal,
   PageLoader,
   ProblemStatusBadge,
-  Segmented,
   Tabs,
   UserLink,
   btn,
@@ -27,25 +24,21 @@ import {
 import { useAuth } from '../hooks/auth'
 import { useDocumentTitle, useToast } from '../hooks/misc'
 import { api, errorMessage } from '../lib/api'
-import { PROBLEM_STATUS, SOLUTION_FLOW, SOLUTION_STATUS, compact, formatDate, num, roleLabel, timeAgo } from '../lib/format'
-import type { Level, Paged, ProblemDetail as TProblem, ProblemStatus, Solution } from '../lib/types'
-
-const MiniMap = lazy(() => import('../components/MapView').then((m) => ({ default: m.MiniMap })))
+import { PROBLEM_STATUS, formatDate, num, roleLabel, timeAgo } from '../lib/format'
+import type { Paged, ProblemDetail as TProblem, ProblemStatus, Solution } from '../lib/types'
 
 const SOL_TABS = [
-  { value: 'top', label: 'Top' },
-  { value: 'latest', label: 'Latest' },
-  { value: 'discussed', label: 'Discussed' },
-  { value: 'implemented', label: 'Implemented' },
+  { value: 'top', label: 'Most supported' },
+  { value: 'latest', label: 'Newest' },
 ] as const
 type SolSort = (typeof SOL_TABS)[number]['value']
 
 function EditProblem({ p, open, onClose }: { p: TProblem; open: boolean; onClose: () => void }) {
   const qc = useQueryClient()
   const toast = useToast()
-  const [form, setForm] = useState({ title: p.title, description: p.description, neighborhood: p.neighborhood ?? '', location: p.location ?? '', urgency: p.urgency, impact: p.impact })
+  const [form, setForm] = useState({ title: p.title, description: p.description, location: p.location ?? '' })
   const m = useMutation({
-    mutationFn: () => api.patch(`/problems/${p.id}`, form),
+    mutationFn: () => api.patch(`/problems/${p.id}`, { ...form, location: form.location.trim() || null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['problem', p.id] })
       toast('Problem updated.')
@@ -53,7 +46,6 @@ function EditProblem({ p, open, onClose }: { p: TProblem; open: boolean; onClose
     },
     onError: (e) => toast(errorMessage(e), 'error'),
   })
-  const levels: { value: Level; label: string }[] = ['low', 'medium', 'high', 'critical'].map((v) => ({ value: v as Level, label: v[0].toUpperCase() + v.slice(1) }))
   return (
     <Modal
       open={open}
@@ -78,20 +70,9 @@ function EditProblem({ p, open, onClose }: { p: TProblem; open: boolean; onClose
         <Field label="Description" htmlFor="e-desc">
           <textarea id="e-desc" className="input min-h-36" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </Field>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Neighbourhood" htmlFor="e-n">
-            <input id="e-n" className="input" value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} />
-          </Field>
-          <Field label="Location" htmlFor="e-l">
-            <input id="e-l" className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-          </Field>
-          <Field label="Urgency">
-            <Segmented label="Urgency" value={form.urgency} onChange={(v) => setForm({ ...form, urgency: v })} options={levels} />
-          </Field>
-          <Field label="Impact">
-            <Segmented label="Impact" value={form.impact} onChange={(v) => setForm({ ...form, impact: v })} options={levels} />
-          </Field>
-        </div>
+        <Field label="Place or affected community" htmlFor="e-l" optional>
+          <input id="e-l" className="input" maxLength={200} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+        </Field>
       </div>
     </Modal>
   )
@@ -135,7 +116,7 @@ export default function ProblemDetail() {
   const qc = useQueryClient()
   const { user } = useAuth()
   const [params, setParams] = useSearchParams()
-  const tab = (params.get('tab') as SolSort) || 'top'
+  const tab: SolSort = params.get('tab') === 'latest' ? 'latest' : 'top'
   const [page, setPage] = useState(1)
   const [editing, setEditing] = useState(false)
 
@@ -166,7 +147,7 @@ export default function ProblemDetail() {
     )
   const p = q.data
   const closed = p.status === 'solved' || p.status === 'archived'
-  const counts = p.solution_status_counts
+  const where = [p.location, p.neighborhood, p.city].filter(Boolean).join(' · ')
   const setTab = (t: SolSort) => {
     setPage(1)
     const next = new URLSearchParams(params)
@@ -192,8 +173,8 @@ export default function ProblemDetail() {
         <div className="min-w-0 space-y-6">
           <article className="card overflow-hidden">
             {p.is_official && (
-              <div className="zellige-light flex items-center gap-2 bg-atlas-800 px-5 py-2.5 text-sm font-semibold text-white sm:px-7">
-                <Landmark className="size-4" aria-hidden /> Official challenge published by {p.author.name}
+              <div className="zellige-light flex items-center gap-2 bg-navy-900 px-5 py-2.5 text-sm font-semibold text-white sm:px-7">
+                <Landmark className="size-4" aria-hidden /> Challenge published by {p.author.name}
               </div>
             )}
             <div className="p-5 sm:p-7">
@@ -203,10 +184,12 @@ export default function ProblemDetail() {
               </div>
               <h1 className="mt-3 text-2xl leading-tight font-extrabold tracking-tight text-sand-900 sm:text-3xl">{p.title}</h1>
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-sand-600">
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="size-4 text-sand-400" aria-hidden />
-                  {[p.location, p.neighborhood, p.city].filter(Boolean).join(' · ')}
-                </span>
+                {where && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="size-4 text-sand-400" aria-hidden />
+                    {where}
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1.5">
                   <CalendarDays className="size-4 text-sand-400" aria-hidden /> {formatDate(p.created_at)}
                 </span>
@@ -214,7 +197,7 @@ export default function ProblemDetail() {
               <div className="mt-4 flex items-center gap-2.5 text-sm">
                 <Avatar user={p.author} size={28} />
                 <span className="text-sand-600">
-                  Reported by <UserLink user={p.author} /> <span className="text-sand-400">· {roleLabel(p.author)} · {timeAgo(p.created_at)}</span>
+                  Shared by <UserLink user={p.author} /> <span className="text-sand-400">· {p.author.affiliation || roleLabel(p.author)} · {timeAgo(p.created_at)}</span>
                 </span>
               </div>
               {p.image_url && <img src={p.image_url} alt="" className="mt-5 max-h-96 w-full rounded-xl object-cover" />}
@@ -258,18 +241,16 @@ export default function ProblemDetail() {
             </div>
           </article>
 
-          {p.ai_analysis && <AnalysisCard analysis={p.ai_analysis} title="AI Insight" />}
-
           {/* ------------------------------------------------ solutions */}
           <section id="solutions" aria-labelledby="solutions-title">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 id="solutions-title" className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
-                <Lightbulb className="size-5 text-saffron-600" aria-hidden /> Solutions
+                <Lightbulb className="size-5 text-atlas-600" aria-hidden /> Solutions
                 <span className="rounded-full bg-sand-200/70 px-2 text-sm font-bold text-sand-600">{p.solutions_count}</span>
               </h2>
               {!closed && (
                 <Link to={`/problems/${p.id}/solutions/new`} className={btn('primary', 'md')} onClick={(e) => !user && (e.preventDefault(), navigate(`/login?next=/problems/${p.id}/solutions/new`))}>
-                  <Plus className="size-4" aria-hidden /> Submit a Solution
+                  <Plus className="size-4" aria-hidden /> Propose a solution
                 </Link>
               )}
             </div>
@@ -277,10 +258,14 @@ export default function ProblemDetail() {
               label="Sort solutions"
               value={tab}
               onChange={setTab}
-              items={SOL_TABS.map((t) => ({ ...t, count: t.value === 'implemented' ? (counts.implemented ?? 0) : undefined }))}
+              items={SOL_TABS.map((t) => ({ ...t }))}
               className="mb-4 w-fit max-w-full"
             />
-            {tab === 'latest' && <p className="-mt-1 mb-3 text-sm text-sand-500">Newest first, regardless of stars — so new contributors aren't buried.</p>}
+            <p className="-mt-1 mb-3 text-sm text-sand-500">
+              {tab === 'latest'
+                ? "Newest first, whatever their stars, so new ideas aren't buried."
+                : 'Ranked by community stars; ties go to the newest. Stars show interest, not a technical review.'}
+            </p>
             {sols.isLoading ? (
               <div className="space-y-3">
                 <CardSkeleton />
@@ -290,13 +275,13 @@ export default function ProblemDetail() {
               <ErrorState error={sols.error} onRetry={() => sols.refetch()} />
             ) : !sols.data?.items.length ? (
               <EmptyState
-                icon={tab === 'implemented' ? Users : Lightbulb}
-                title={tab === 'implemented' ? 'No solution implemented yet' : 'No solutions yet'}
-                body={tab === 'implemented' ? 'When an organization implements a solution, it will appear here with its impact.' : 'Be the first to propose a solution to this problem.'}
+                icon={Lightbulb}
+                title="No solutions yet"
+                body={closed ? 'This problem is closed to new solutions.' : 'Be the first to propose a solution to this problem.'}
                 action={
-                  !closed && tab !== 'implemented' ? (
+                  !closed ? (
                     <Link to={`/problems/${p.id}/solutions/new`} className={btn('primary', 'md')}>
-                      Submit a Solution
+                      Propose a solution
                     </Link>
                   ) : undefined
                 }
@@ -328,19 +313,11 @@ export default function ProblemDetail() {
 
         {/* ------------------------------------------------ side column */}
         <aside className="space-y-5">
-          <section className="card overflow-hidden" aria-label="Problem impact">
-            {p.lat != null && p.lng != null && (
-              <Suspense fallback={<div className="h-44 animate-pulse bg-sand-100" />}>
-                <Link to="/map" aria-label="Open the problem map">
-                  <MiniMap lat={p.lat} lng={p.lng} color={p.category.color} />
-                </Link>
-              </Suspense>
-            )}
-            <dl className="grid grid-cols-2 gap-px bg-sand-100">
+          <section className="card overflow-hidden" aria-label="Problem at a glance">
+            <dl className="grid grid-cols-3 gap-px bg-sand-100">
               {[
-                ['Supporters', num(p.supporters_count)],
-                ['Followers', num(p.followers_count)],
                 ['Solutions', p.solutions_count],
+                ['Supporters', num(p.supporters_count)],
                 ['Comments', p.comments_count],
               ].map(([k, v]) => (
                 <div key={k} className="bg-white px-4 py-3">
@@ -350,40 +327,22 @@ export default function ProblemDetail() {
               ))}
             </dl>
             <div className="space-y-3 border-t border-sand-100 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-sand-600">Urgency</span>
-                <LevelMeter level={p.urgency} label="Urgency" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-sand-600">Impact</span>
-                <LevelMeter level={p.impact} label="Impact" />
-              </div>
-              {p.affected_population ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-sand-600">People affected (est.)</span>
-                  <span className="text-sm font-bold text-sand-900">~{compact(p.affected_population)}</span>
-                </div>
-              ) : null}
+              {!closed && (
+                <Link
+                  to={`/problems/${p.id}/solutions/new`}
+                  className={btn('primary', 'md', 'w-full')}
+                  onClick={(e) => !user && (e.preventDefault(), navigate(`/login?next=/problems/${p.id}/solutions/new`))}
+                >
+                  <Lightbulb className="size-4" aria-hidden /> Propose a solution
+                </Link>
+              )}
               <StatusControl p={p} />
             </div>
           </section>
-
-          {p.solutions_count > 0 && (
-            <section className="card p-4" aria-label="Implementation pipeline">
-              <h2 className="text-sm font-bold text-sand-900">Implementation pipeline</h2>
-              <ol className="mt-3 space-y-2">
-                {SOLUTION_FLOW.map((s) => (
-                  <li key={s} className="flex items-center gap-2.5 text-sm">
-                    <span className={`size-2 rounded-full ${SOLUTION_STATUS[s].dot}`} aria-hidden />
-                    <span className="flex-1 text-sand-700">{SOLUTION_STATUS[s].label}</span>
-                    <span className="font-bold text-sand-900 tabular-nums">{counts[s] ?? 0}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          <ContributorMatches problemId={p.id} />
+          <section className="card p-4 text-sm text-sand-600">
+            <h2 className="font-bold text-sand-900">How solutions are ranked</h2>
+            <p className="mt-1">Each signed-in person can star a solution once, and can't star their own. “Most supported” sorts by those stars.</p>
+          </section>
         </aside>
       </div>
       {p.can_edit && <EditProblem p={p} open={editing} onClose={() => setEditing(false)} />}

@@ -1,53 +1,59 @@
 import clsx from 'clsx'
-import { HandHeart, Landmark, Lightbulb, MapPin, MessageSquare, Rocket, Sparkles, Star, Trophy, Users } from 'lucide-react'
+import { HandHeart, Landmark, Lightbulb, MapPin, MessageSquare, Rocket, Sparkles, Star, Trophy } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { compact, formatDate, isRecent, num, roleLabel, timeAgo } from '../lib/format'
 import type { Activity, Problem, Solution, UserWithStats } from '../lib/types'
 import { StarButton } from './actions'
-import { Avatar, CategoryBadge, LevelMeter, ProblemStatusBadge, SolutionStatusBadge, UserLink } from './ui'
+import { Avatar, CategoryBadge, ProblemStatusBadge, SolutionStatusBadge, UserLink } from './ui'
 
 export function ProblemCard({ problem, compactCard = false }: { problem: Problem; compactCard?: boolean }) {
+  const where = [problem.neighborhood, problem.city].filter(Boolean).join(', ')
   return (
     <article className="card group relative flex flex-col p-5 transition-shadow hover:shadow-md hover:shadow-sand-200/60">
       <div className="mb-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <CategoryBadge category={problem.category} />
         {problem.is_official && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-atlas-700 px-2 py-0.5 text-[11px] font-bold text-white">
-            <Landmark className="size-3" aria-hidden /> Official challenge
+          <span className="inline-flex items-center gap-1 rounded-full bg-navy-900 px-2 py-0.5 text-[11px] font-bold text-white">
+            <Landmark className="size-3" aria-hidden /> Organization challenge
           </span>
         )}
-        <span className="ml-auto">
-          <ProblemStatusBadge status={problem.status} />
-        </span>
+        {problem.status !== 'open' && (
+          <span className="ml-auto">
+            <ProblemStatusBadge status={problem.status} />
+          </span>
+        )}
       </div>
       <h3 className="text-[16px] leading-snug font-bold text-sand-900">
-        <Link to={`/problems/${problem.id}`} className="after:absolute after:inset-0 group-hover:text-atlas-800">
+        <Link to={`/problems/${problem.id}`} className="after:absolute after:inset-0 group-hover:text-navy-800">
           {problem.title}
         </Link>
       </h3>
-      <p className="mt-1 flex items-center gap-1 text-[13px] text-sand-500">
-        <MapPin className="size-3.5 shrink-0" aria-hidden />
-        <span className="truncate">
-          {problem.city}
-          {problem.neighborhood && ` · ${problem.neighborhood}`}
-        </span>
+      {!compactCard && <p className="mt-2 line-clamp-2 text-sm text-sand-600">{problem.excerpt}</p>}
+      <p className="mt-3 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-sand-500">
+        <span className="truncate font-semibold text-sand-700">{problem.author.name}</span>
+        <span aria-hidden>·</span>
+        <time dateTime={problem.created_at}>{timeAgo(problem.created_at)}</time>
+        {where && (
+          <>
+            <span aria-hidden>·</span>
+            <span className="inline-flex min-w-0 items-center gap-0.5">
+              <MapPin className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{where}</span>
+            </span>
+          </>
+        )}
       </p>
-      {!compactCard && <p className="mt-2.5 line-clamp-2 text-sm text-sand-600">{problem.excerpt}</p>}
       <div className="mt-auto flex items-center gap-4 pt-4 text-[13px] font-semibold text-sand-600">
-        <span className="inline-flex items-center gap-1" title="Supporters">
+        <span className="inline-flex items-center gap-1">
+          <Lightbulb className="size-4 text-atlas-600" aria-hidden /> {problem.solutions_count} solution{problem.solutions_count === 1 ? '' : 's'}
+        </span>
+        <span className="inline-flex items-center gap-1" title="People who support this problem">
           <HandHeart className="size-4 text-clay-500" aria-hidden /> {compact(problem.supporters_count)}
           <span className="sr-only">supporters</span>
-        </span>
-        <span className="inline-flex items-center gap-1" title="Solutions">
-          <Lightbulb className="size-4 text-saffron-600" aria-hidden /> {problem.solutions_count}
-          <span className="sr-only">solutions</span>
         </span>
         <span className="inline-flex items-center gap-1" title="Comments">
           <MessageSquare className="size-4 text-sand-400" aria-hidden /> {problem.comments_count}
           <span className="sr-only">comments</span>
-        </span>
-        <span className="ml-auto hidden sm:inline">
-          <LevelMeter level={problem.urgency} label="Urgency" />
         </span>
       </div>
     </article>
@@ -68,12 +74,8 @@ export function SolutionCard({ solution, showProblem = false, highlightNew = fal
               <Sparkles className="size-3" aria-hidden /> New
             </span>
           )}
-          <SolutionStatusBadge status={solution.status} />
-          {solution.status === 'implemented' && solution.implementation?.citizens_impacted ? (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-atlas-700">
-              <Users className="size-3.5" aria-hidden /> {compact(solution.implementation.citizens_impacted)} citizens impacted
-            </span>
-          ) : solution.decided_by && solution.status === 'selected' ? (
+          {solution.status !== 'proposed' && <SolutionStatusBadge status={solution.status} />}
+          {solution.decided_by && solution.status === 'selected' ? (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-saffron-700">
               <Trophy className="size-3.5" aria-hidden /> Selected by {solution.decided_by.name}
             </span>
@@ -129,8 +131,7 @@ export function SolutionRow({ solution, showTime = true }: { solution: Solution;
           {solution.title}
         </Link>
         <p className="truncate text-[13px] text-sand-500">
-          {solution.problem.category.name} · {solution.problem.city}
-          {showTime && <> · {timeAgo(solution.created_at)}</>}
+          {[solution.problem.category.name, solution.author.name, showTime ? timeAgo(solution.created_at) : null].filter(Boolean).join(' · ')}
         </p>
       </div>
       <span className="relative z-10">
@@ -157,15 +158,13 @@ export function ImplementedCard({ solution }: { solution: Solution }) {
             {solution.title}
           </Link>
         </h3>
-        <p className="mt-1 text-[13px] text-sand-500">
-          {solution.problem.city} · by {solution.author.name}
-        </p>
+        <p className="mt-1 text-[13px] text-sand-500">by {solution.author.name}</p>
         {impl?.impact_summary && <p className="mt-2.5 line-clamp-3 text-sm text-sand-600">{impl.impact_summary}</p>}
         <div className="mt-auto flex items-end justify-between pt-4">
           {impl?.citizens_impacted ? (
             <div>
               <div className="text-2xl font-extrabold text-atlas-700 tabular-nums">{num(impl.citizens_impacted)}</div>
-              <div className="text-xs font-semibold text-sand-500">citizens impacted</div>
+              <div className="text-xs font-semibold text-sand-500">people impacted (reported)</div>
             </div>
           ) : (
             <span />
@@ -209,6 +208,7 @@ const VERB: Record<string, string> = {
   commented_problem: 'commented on',
   supported_problem: 'supported',
   joined_solution: 'joined the team of',
+  expressed_interest: 'expressed interest in',
   changed_problem_status: 'updated the status of',
 }
 

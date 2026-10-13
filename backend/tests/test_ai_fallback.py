@@ -18,7 +18,7 @@ def _broken_provider() -> ClaudeAIService:
 def test_analysis_falls_back_to_local():
     a = _broken_provider().analyze_problem("Market bins", "The garbage containers around the market overflow every Friday.", "Rabat")
     assert a["provider"] == "local" and a["fallback_reason"] == "invalid_output"
-    assert a["category"] == "waste"
+    assert a["category"] == "environment"  # waste is part of the Environment domain
 
 
 def test_summary_falls_back_to_local():

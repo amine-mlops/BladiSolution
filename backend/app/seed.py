@@ -1,4 +1,7 @@
-"""Build the BladiSolution demo database from app.seed_data.
+"""Build a FICTIONAL demo database from app.seed_data, for local development and tests.
+
+All people, organizations, stars and implementations here are made up. Never load this
+into a database real users see. It is not loaded automatically unless SEED_ON_STARTUP=true.
 
 Every derived row (stars, supports, activity, notifications) is generated from
 the seeded events themselves, so counters and feeds are internally consistent.
@@ -13,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from .constants import CITIES
+from .constants import CITIES, canonical_category
 from .models import (
     Activity,
     CategoryFollow,
@@ -66,7 +69,8 @@ def seed_demo(db: Session, community_size: int = COMMUNITY_SIZE) -> dict:
             city=u.get("city"),
             bio=u.get("bio"),
             skills=u.get("skills", []),
-            verified=u.get("verified", False),
+            # Demo organizations are pre-verified so the organization workflow can be tried out.
+            verified=u.get("verified", False) or u["role"] in ("organization", "municipality"),
             is_demo=u.get("demo", False),
             created_at=ts(120 - i),
         )
@@ -146,7 +150,7 @@ def seed_demo(db: Session, community_size: int = COMMUNITY_SIZE) -> dict:
         lat, lng = spec.get("coords") or CITIES[spec["city"]]
         analysis = ai.analyze_problem(spec["title"], spec["description"], spec["city"])
         p = Problem(
-            title=spec["title"], description=spec["description"], category=spec["category"], city=spec["city"],
+            title=spec["title"], description=spec["description"], category=canonical_category(spec["category"]), city=spec["city"],
             neighborhood=spec.get("neighborhood"), location=spec.get("location"), lat=lat, lng=lng,
             impact=spec["impact"], urgency=spec["urgency"], status=spec.get("status", "open"),
             is_official=spec.get("official", False), author_id=author.id, ai_analysis=analysis,
@@ -303,7 +307,7 @@ def seed_demo(db: Session, community_size: int = COMMUNITY_SIZE) -> dict:
         for b in targets:
             db.add(UserFollow(follower_id=users[a].id, followed_id=users[b].id, created_at=ts(30)))
     for a, cats in CATEGORY_FOLLOWS.items():
-        for c in cats:
+        for c in sorted({canonical_category(c) for c in cats}):
             db.add(CategoryFollow(user_id=users[a].id, category=c, created_at=ts(30)))
     # A few community follows for realistic follower counts
     for target in ("amine", "smartlab", "org_demo", "talent_demo", "darna", "sara", "mahfoud"):

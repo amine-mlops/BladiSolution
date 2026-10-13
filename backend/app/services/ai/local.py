@@ -7,7 +7,7 @@ configured, and the safety net the Claude provider falls back to.
 import re
 from collections import Counter
 
-from ...constants import CATEGORIES, CATEGORY_BY_SLUG, CITIES
+from ...constants import CATEGORIES, CATEGORY_BY_SLUG, CITIES, canonical_category
 from ..text import TfIdfIndex, first_sentences, strip_accents, tokenize, top_keywords
 
 # Canonical tokens (after synonym mapping/stemming) that signal each category.
@@ -70,6 +70,16 @@ CATEGORY_SIGNALS: dict[str, dict[str, float]] = {
         "lighting": 3, "crime": 3.5, "theft": 3, "accident": 3, "pothole": 3, "unsafe": 3, "danger": 3,
         "dangerous": 3, "harassment": 3, "fire": 3, "emergency": 1.5, "police": 3, "crosswalk": 2,
         "safety": 3, "stray": 2.5, "speeding": 3, "manhole": 3, "collapse": 3, "pedestrian": 2, "road": 1,
+    },
+    "technology": {
+        "software": 3, "app": 2.5, "application": 2, "website": 3, "internet": 3.5, "wifi": 3.5, "network": 2,
+        "data": 1.5, "cybersecurity": 3.5, "platform": 1.5, "computer": 3, "digital": 1.5, "connectivity": 3.5,
+        "password": 2, "hack": 2.5, "server": 2.5, "smartphone": 2, "coding": 3, "programming": 3,
+    },
+    "agriculture": {
+        "farm": 3.5, "farmer": 3.5, "farming": 3.5, "agriculture": 4, "agricultural": 4, "crop": 3.5, "harvest": 3.5,
+        "livestock": 3.5, "cattle": 3, "irrigation": 2.5, "soil": 3, "seed": 2.5, "food": 2, "fertilizer": 3,
+        "pesticide": 3, "rural": 2, "olive": 2.5, "greenhouse": 3, "cooperative": 1, "grain": 3, "orchard": 3,
     },
 }
 
@@ -138,6 +148,16 @@ SUBCATEGORIES: dict[str, list[tuple[set[str], str]]] = {
         ({"queue", "appointment", "paperwork", "procedure", "certificate"}, "Administrative services"),
         ({"transparency", "budget", "participation"}, "Transparency & participation"),
     ],
+    "technology": [
+        ({"internet", "wifi", "connectivity", "network"}, "Connectivity"),
+        ({"app", "website", "software", "platform"}, "Digital services"),
+        ({"cybersecurity", "password", "hack"}, "Cybersecurity"),
+    ],
+    "agriculture": [
+        ({"irrigation", "water", "drought", "soil"}, "Water & soil"),
+        ({"crop", "harvest", "seed", "fertilizer", "pesticide"}, "Crop production"),
+        ({"food", "cooperative", "grain"}, "Food supply"),
+    ],
 }
 
 IMPACT_AREAS = {
@@ -153,7 +173,38 @@ IMPACT_AREAS = {
     "urban-planning": ["Urban Quality", "Social"],
     "healthcare": ["Public Health", "Social"],
     "public-safety": ["Safety", "Public Health"],
+    "technology": ["Digital", "Economic"],
+    "agriculture": ["Food Security", "Economic"],
 }
+
+
+def _to_current_domains() -> None:
+    """Fold the prototype's category vocabularies into the current domains.
+
+    The keyword lists above are still written per legacy category (they are finer
+    grained); this merges them so every key is a slug from constants.CATEGORIES.
+    """
+    signals: dict[str, dict[str, float]] = {}
+    for slug, words in CATEGORY_SIGNALS.items():
+        merged = signals.setdefault(canonical_category(slug), {})
+        for word, weight in words.items():
+            merged[word] = max(weight, merged.get(word, 0))
+    subs: dict[str, list[tuple[set[str], str]]] = {}
+    for slug, rules in SUBCATEGORIES.items():
+        subs.setdefault(canonical_category(slug), []).extend(rules)
+    areas: dict[str, list[str]] = {}
+    for slug, labels in IMPACT_AREAS.items():
+        target = areas.setdefault(canonical_category(slug), [])
+        target.extend(label for label in labels if label not in target)
+    for target, source in ((CATEGORY_SIGNALS, signals), (SUBCATEGORIES, subs), (IMPACT_AREAS, areas)):
+        target.clear()
+        target.update(source)
+    for slug, labels in IMPACT_AREAS.items():
+        IMPACT_AREAS[slug] = labels[:2]
+    assert set(CATEGORY_SIGNALS) <= set(CATEGORY_BY_SLUG), set(CATEGORY_SIGNALS) - set(CATEGORY_BY_SLUG)
+
+
+_to_current_domains()
 
 CRITICAL_SIGNALS = [
     "injur", "death", "died", "killed", "electrocut", "collapse", "fire", "sewage", "drown", "life-threatening",
@@ -221,7 +272,7 @@ class LocalAIService:
             if s:
                 scores[slug] = s
         if not scores:
-            return "urban-planning", 0.2, []
+            return "other", 0.2, []
         ranked = sorted(scores.items(), key=lambda kv: -kv[1])
         best, best_score = ranked[0]
         total = sum(scores.values())

@@ -30,7 +30,7 @@ async function request<T>(method: string, path: string, body?: unknown, query?: 
       body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
-    throw new ApiError(0, "Can't reach BladiSolution right now. Check your connection and try again.")
+    throw new ApiError(0, "Can't reach BladiSolution Campus right now. Check your connection and try again.")
   }
   if (res.status === 204) return undefined as T
   let data: unknown = null

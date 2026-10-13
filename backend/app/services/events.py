@@ -57,7 +57,7 @@ def on_new_problem(db: Session, actor: User, problem: Problem) -> None:
     watchers = set(db.scalars(select(CategoryFollow.user_id).where(CategoryFollow.category == problem.category)))
     watchers.discard(actor.id)
     label = "official challenge" if problem.is_official else "problem"
-    notify_many(db, watchers, actor, "category_problem", f'New {label} in a category you follow: "{problem.title}" ({problem.city}).', link)
+    notify_many(db, watchers, actor, "category_problem", f'New {label} in a domain you follow: "{problem.title}"' + (f" ({problem.city})." if problem.city else "."), link)
 
 
 def on_star(db: Session, actor: User, solution: Solution) -> None:

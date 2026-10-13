@@ -73,6 +73,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), default="citizen", index=True)
     org_kind: Mapped[str | None] = mapped_column(String(30), nullable=True)
     headline: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # University, school, company or organization the person is part of (free text, optional).
+    affiliation: Mapped[str | None] = mapped_column(String(160), nullable=True)
     city: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills: Mapped[list] = mapped_column(JSON, default=list)
@@ -182,6 +184,25 @@ class Implementation(Base):
 
     solution: Mapped[Solution] = relationship(back_populates="implementation")
     organization: Mapped[User] = relationship(lazy="joined")
+
+
+class OrganizationInterest(Base):
+    """A verified organization saying it wants to implement, sponsor or mentor a solution.
+
+    This is an expression of interest that opens a conversation with the author. It is not
+    an approval, a funding commitment or a contract.
+    """
+
+    __tablename__ = "organization_interests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    solution_id: Mapped[int] = mapped_column(ForeignKey("solutions.id", ondelete="CASCADE"), index=True)
+    organization_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))  # implementation | sponsorship | mentorship
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = TS()
+
+    organization: Mapped[User] = relationship(lazy="joined")
+    __table_args__ = (UniqueConstraint("solution_id", "organization_id"),)
 
 
 class Comment(Base):
