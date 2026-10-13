@@ -21,6 +21,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-bladi}:${POSTGRES_PASSWORD:-bladi}@db:5432/${POSTGRES_DB:-bladisolution}
       CORS_ORIGINS: http://localhost:8080
+      # nginx (frontend service) overwrites X-Forwarded-For with the real client address.
+      TRUST_FORWARDED_FOR: "true"
     volumes:
       - uploads:/app/uploads
     depends_on:

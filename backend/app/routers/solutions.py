@@ -1,16 +1,17 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import String, cast, desc, select, update
+from sqlalchemy import String, cast, desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..constants import AUTHOR_SOLUTION_STATUSES, DECISION_ROLES, SOLUTION_STATUSES
+from ..constants import AUTHOR_SOLUTION_STATUSES, SOLUTION_STATUSES, canonical_category
 from ..db import get_db
 from ..models import (
     Activity,
     Comment,
     Implementation,
+    OrganizationInterest,
     Problem,
     ProblemFollower,
     Solution,
@@ -19,8 +20,8 @@ from ..models import (
     User,
     utcnow,
 )
-from ..schemas import CollaborationDecision, CollaborationIn, CommentIn, ContactIn, SolutionUpdate, StatusChange
-from ..security import get_current_user, get_optional_user, rate_limit
+from ..schemas import CollaborationDecision, CollaborationIn, CommentIn, ContactIn, InterestIn, SolutionUpdate, StatusChange
+from ..security import can_decide, get_current_user, get_optional_user, is_organization, rate_limit
 from ..serializers import comment_out, iso, solution_out, solutions_out, user_brief
 from ..services import events
 from ..services.ranking import solution_trending_scores
@@ -41,6 +42,7 @@ def feed(
     status: str | None = None,
     skill: str | None = Query(None, max_length=40),
     since: str | None = None,
+    q: str | None = Query(None, max_length=120),
     page: Page = Depends(),
     db: Session = Depends(get_db),
     viewer: User | None = Depends(get_optional_user),
@@ -52,11 +54,15 @@ def feed(
         Solution.is_hidden.is_(False), Problem.is_hidden.is_(False)
     )
     if category:
-        stmt = stmt.where(Problem.category == category)
+        stmt = stmt.where(Problem.category == canonical_category(category))
     if city:
         stmt = stmt.where(Problem.city == city)
     if neighborhood:
         stmt = stmt.where(Problem.neighborhood.ilike(f"%{neighborhood}%"))
+    if q:
+        for term in q.split()[:6]:
+            like = f"%{term}%"
+            stmt = stmt.where(or_(Solution.title.ilike(like), Solution.description.ilike(like), Problem.title.ilike(like)))
     if status:
         if status not in SOLUTION_STATUSES:
             raise HTTPException(400, "Unknown status")
@@ -82,24 +88,24 @@ def feed(
             "top": [desc(Solution.stars_count), desc(Solution.created_at)],
             "discussed": [desc(Solution.comments_count), desc(Solution.last_activity_at)],
             "implemented": [desc(Solution.decided_at)],
-        }[sort]
+        }[sort] + [desc(Solution.id)]  # deterministic order for ties
         items, total = page.apply(db, stmt.order_by(*order))
     return page.envelope(solutions_out(db, viewer, items), total)
 
 
 @router.get("/latest")
 def latest(page: Page = Depends(), db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)):
-    return feed(sort="latest", page=page, db=db, viewer=viewer, category=None, city=None, neighborhood=None, status=None, skill=None, since=None)
+    return feed(sort="latest", page=page, db=db, viewer=viewer, category=None, city=None, neighborhood=None, status=None, skill=None, since=None, q=None)
 
 
 @router.get("/trending")
 def trending(page: Page = Depends(), db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)):
-    return feed(sort="trending", page=page, db=db, viewer=viewer, category=None, city=None, neighborhood=None, status=None, skill=None, since=None)
+    return feed(sort="trending", page=page, db=db, viewer=viewer, category=None, city=None, neighborhood=None, status=None, skill=None, since=None, q=None)
 
 
 @router.get("/top")
 def top(page: Page = Depends(), db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)):
-    return feed(sort="top", page=page, db=db, viewer=viewer, category=None, city=None, neighborhood=None, status=None, skill=None, since=None)
+    return feed(sort="top", page=page, db=db, viewer=viewer, category=None, city=None, neighborhood=None, status=None, skill=None, since=None, q=None)
 
 
 def _contributors(db: Session, s: Solution) -> list[dict]:
@@ -121,7 +127,26 @@ def get_solution(solution_id: int, db: Session = Depends(get_db), viewer: User |
     is_author = bool(viewer and viewer.id == s.author_id)
     out["contributors"] = [c for c in contributors if c["status"] == "accepted" or is_author]
     out["can_edit"] = is_author
-    out["can_decide"] = bool(viewer and viewer.role in DECISION_ROLES)
+    out["can_decide"] = can_decide(viewer)
+    out["can_star"] = not is_author
+    interests = list(
+        db.scalars(
+            select(OrganizationInterest).where(OrganizationInterest.solution_id == s.id).order_by(OrganizationInterest.created_at)
+        )
+    )
+    # Which organizations are interested is public; their private messages are for the author.
+    out["interests"] = [
+        {
+            "organization": user_brief(i.organization),
+            "kind": i.kind,
+            "created_at": iso(i.created_at),
+            "message": i.message if viewer and viewer.id in (s.author_id, i.organization_id) else None,
+        }
+        for i in interests
+        if not i.organization.is_hidden
+    ]
+    out["my_interest"] = next((i.kind for i in interests if viewer and i.organization_id == viewer.id), None)
+    out["is_organization"] = is_organization(viewer)
     out["my_collaboration"] = next(
         (c["status"] for c in contributors if viewer and c["user"]["id"] == viewer.id and c["role"] == "contributor"), None
     )
@@ -137,6 +162,8 @@ def edit_solution(solution_id: int, body: SolutionUpdate, db: Session = Depends(
     if user.id != s.author_id:
         raise HTTPException(403, "Only the author can edit this solution.")
     for k, v in body.model_dump(exclude_unset=True).items():
+        if v is None and k in ("title", "description", "approach", "impact", "implementation_plan"):
+            v = "" if k in ("approach", "impact", "implementation_plan") else getattr(s, k)
         setattr(s, k, v)
     s.last_activity_at = utcnow()
     events.record(db, user, "updated_solution", solution=s)
@@ -148,11 +175,13 @@ def edit_solution(solution_id: int, body: SolutionUpdate, db: Session = Depends(
 def change_status(solution_id: int, body: StatusChange, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     s = get_solution_or_404(db, solution_id, user)
     is_author = user.id == s.author_id
-    is_decider = user.role in DECISION_ROLES
+    is_decider = can_decide(user)
     if body.status == s.status:
         return get_solution(solution_id, db, user)
     if not is_decider and not (is_author and body.status in AUTHOR_SOLUTION_STATUSES and s.status in AUTHOR_SOLUTION_STATUSES):
-        raise HTTPException(403, "Only organizations and municipalities can evaluate, select or implement solutions.")
+        if is_organization(user):
+            raise HTTPException(403, "Your organization account is waiting for verification by a moderator.")
+        raise HTTPException(403, "Only verified organizations can evaluate, select or implement solutions.")
 
     old = s.status
     s.status = body.status
@@ -208,17 +237,25 @@ def change_status(solution_id: int, body: StatusChange, db: Session = Depends(ge
 
 
 # ---------------------------------------------------------------- stars
+def _sync_star_count(db: Session, s: Solution) -> None:
+    """Store the number of persisted star rows on the solution (the column feeds sorting)."""
+    count = select(func.count()).select_from(SolutionStar).where(SolutionStar.solution_id == s.id).scalar_subquery()
+    db.execute(update(Solution).where(Solution.id == s.id).values(stars_count=count))
+
+
 @router.post("/{solution_id}/star", dependencies=[Depends(rate_limit("star", 120, 60))])
 def star(solution_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     s = get_solution_or_404(db, solution_id, user)
+    if user.id == s.author_id:
+        raise HTTPException(400, "You can't star your own solution.")
     if db.get(SolutionStar, {"user_id": user.id, "solution_id": s.id}) is None:
         try:
             db.add(SolutionStar(user_id=user.id, solution_id=s.id))
             db.flush()
-        except IntegrityError:
+        except IntegrityError:  # a concurrent request starred first; the primary key keeps one row
             db.rollback()
         else:
-            db.execute(update(Solution).where(Solution.id == s.id).values(stars_count=Solution.stars_count + 1))
+            _sync_star_count(db, s)
             db.refresh(s)
             events.on_star(db, user, s)
             db.commit()
@@ -232,7 +269,8 @@ def unstar(solution_id: int, db: Session = Depends(get_db), user: User = Depends
     row = db.get(SolutionStar, {"user_id": user.id, "solution_id": s.id})
     if row is not None:
         db.delete(row)
-        db.execute(update(Solution).where(Solution.id == s.id, Solution.stars_count > 0).values(stars_count=Solution.stars_count - 1))
+        db.flush()
+        _sync_star_count(db, s)
         db.commit()
     db.refresh(s)
     return {"starred": False, "stars_count": s.stars_count}
@@ -278,7 +316,10 @@ def solution_activity(solution_id: int, db: Session = Depends(get_db), viewer: U
     s = get_solution_or_404(db, solution_id, viewer)
     rows = db.scalars(
         select(Activity)
-        .where(Activity.solution_id == s.id, Activity.verb.in_(["submitted_solution", "changed_solution_status", "updated_solution", "joined_solution"]))
+        .where(
+            Activity.solution_id == s.id,
+            Activity.verb.in_(["submitted_solution", "changed_solution_status", "updated_solution", "joined_solution", "expressed_interest"]),
+        )
         .order_by(desc(Activity.created_at))
         .limit(30)
     )
@@ -286,6 +327,65 @@ def solution_activity(solution_id: int, db: Session = Depends(get_db), viewer: U
         {"id": a.id, "verb": a.verb, "actor": user_brief(a.actor), "meta": a.meta, "created_at": iso(a.created_at)}
         for a in rows
     ]
+
+
+# ---------------------------------------------------------------- organization interest
+INTEREST_LABEL = {
+    "implementation": "implementing",
+    "sponsorship": "sponsoring or funding",
+    "mentorship": "mentoring and supporting",
+}
+
+
+@router.post("/{solution_id}/interest", dependencies=[Depends(rate_limit("interest", 30, 3600))])
+def express_interest(solution_id: int, body: InterestIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """A verified organization signals it wants to discuss implementing, sponsoring or mentoring."""
+    s = get_solution_or_404(db, solution_id, user)
+    if not is_organization(user) or not can_decide(user):
+        if is_organization(user):
+            raise HTTPException(403, "Your organization account is waiting for verification by a moderator.")
+        raise HTTPException(403, "Only verified organization accounts can express interest. You can still contact the author.")
+    if user.id == s.author_id:
+        raise HTTPException(400, "This is your own solution.")
+    row = db.scalar(
+        select(OrganizationInterest).where(OrganizationInterest.solution_id == s.id, OrganizationInterest.organization_id == user.id)
+    )
+    is_new = row is None
+    if is_new:
+        row = OrganizationInterest(solution_id=s.id, organization_id=user.id, kind=body.kind)
+        db.add(row)
+    row.kind = body.kind
+    row.message = body.message
+    if is_new:
+        events.record(db, user, "expressed_interest", solution=s, kind=body.kind)
+        note = f' Their message: "{body.message}"' if body.message else ""
+        events.notify(
+            db,
+            s.author_id,
+            user,
+            "organization_interest",
+            f'{user.name} is interested in {INTEREST_LABEL[body.kind]} "{s.title}". '
+            f"You can reach them at {user.email}.{note}",
+            f"/solutions/{s.id}#organizations",
+        )
+    try:
+        db.commit()
+    except IntegrityError:  # a concurrent duplicate request created the row first
+        db.rollback()
+        is_new = False
+    return {"kind": body.kind, "created": is_new}
+
+
+@router.delete("/{solution_id}/interest")
+def withdraw_interest(solution_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    s = get_solution_or_404(db, solution_id, user)
+    row = db.scalar(
+        select(OrganizationInterest).where(OrganizationInterest.solution_id == s.id, OrganizationInterest.organization_id == user.id)
+    )
+    if row is not None:
+        db.delete(row)
+        db.commit()
+    return {"kind": None}
 
 
 # ---------------------------------------------------------------- contact & collaboration

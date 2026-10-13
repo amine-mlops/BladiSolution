@@ -196,7 +196,7 @@ def test_ai_analysis(anon):
         json={"title": "Market bins", "description": "The garbage containers around the market overflow every Friday and Saturday.", "city": "Rabat"},
     )
     a = r.json()
-    assert a["category"] == "waste" and a["frequency"] == "Weekly" and a["urgency"] in ("high", "critical")
+    assert a["category"] == "environment" and a["frequency"] == "Weekly" and a["urgency"] in ("high", "critical")
     assert "Public Health" in a["impact_areas"]
     assert {"container", "overflow"} <= set(a["keywords"])
 
@@ -225,13 +225,14 @@ def test_contributor_matching_and_summary(anon):
 
 def test_feeds_search_dashboard(anon):
     assert anon.get("/api/solutions", params={"sort": "trending"}).status_code == 200
+    # Legacy category slugs are still accepted and mapped onto the current domain.
     filtered = anon.get("/api/solutions", params={"category": "waste", "city": "Rabat"}).json()["items"]
-    assert filtered and all(s["problem"]["category"]["slug"] == "waste" and s["problem"]["city"] == "Rabat" for s in filtered)
+    assert filtered and all(s["problem"]["category"]["slug"] == "environment" and s["problem"]["city"] == "Rabat" for s in filtered)
     res = anon.get("/api/search", params={"q": "waste Rabat"}).json()
     assert any("Waste" in p["title"] for p in res["problems"])
     assert anon.get("/api/search", params={"q": "Python"}).json()["users"]
     d = anon.get("/api/dashboard").json()
-    assert len(d["problems_by_category"]) == 12 and d["stats"]["problems"] > 20
+    assert len(d["problems_by_category"]) == 11 and d["stats"]["problems"] > 20
     disc = anon.get("/api/discover").json()
     assert disc["latest_solutions"] and disc["top_contributors"] and disc["active_organizations"]
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Bell, BellOff, CheckCheck, Gavel, Handshake, Lightbulb, LogIn, Mail, MessageSquare, Reply, Rocket, Star, Trophy, UserPlus } from 'lucide-react'
+import { BadgeCheck, Bell, BellOff, Building2, CheckCheck, Gavel, Handshake, Lightbulb, LogIn, Mail, MessageSquare, Reply, Rocket, Star, Trophy, UserPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Page } from '../components/Layout'
 import { Button, CardSkeleton, EmptyState, ErrorState, btn } from '../components/ui'
@@ -23,6 +23,9 @@ const ICONS: Record<string, { icon: typeof Bell; tone: string }> = {
   status_evaluation: { icon: Gavel, tone: 'bg-violet-50 text-violet-700' },
   contact: { icon: Mail, tone: 'bg-clay-50 text-clay-600' },
   new_follower: { icon: UserPlus, tone: 'bg-atlas-50 text-atlas-700' },
+  organization_interest: { icon: Building2, tone: 'bg-navy-50 text-navy-800' },
+  organization_verified: { icon: BadgeCheck, tone: 'bg-atlas-50 text-atlas-700' },
+  category_problem: { icon: Lightbulb, tone: 'bg-sand-100 text-sand-700' },
 }
 
 export default function Notifications() {

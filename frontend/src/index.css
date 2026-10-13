@@ -3,32 +3,46 @@
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  /* Warm neutral "sand" scale */
-  --color-sand-25: #fdfcfa;
-  --color-sand-50: #faf8f4;
-  --color-sand-100: #f3efe7;
-  --color-sand-200: #e7e1d5;
-  --color-sand-300: #d6cebf;
-  --color-sand-400: #a99f8e;
-  --color-sand-500: #7d7465;
-  --color-sand-600: #5e574b;
-  --color-sand-700: #433e36;
-  --color-sand-800: #2b2823;
-  --color-sand-900: #1b1916;
+  /* Neutral scale (kept under the historical "sand" token name), cool slate tones */
+  --color-sand-25: #fcfdfe;
+  --color-sand-50: #f6f8fb;
+  --color-sand-100: #eef2f6;
+  --color-sand-200: #e1e7ef;
+  --color-sand-300: #cbd4e0;
+  --color-sand-400: #94a2b6;
+  --color-sand-500: #64748b;
+  --color-sand-600: #4a5a70;
+  --color-sand-700: #334256;
+  --color-sand-800: #1e2b3c;
+  --color-sand-900: #0e1b2b;
 
-  /* Primary: deep Atlas green */
-  --color-atlas-50: #edf7f2;
-  --color-atlas-100: #d3ecdf;
-  --color-atlas-200: #a8d8c0;
-  --color-atlas-300: #73bd9a;
-  --color-atlas-400: #3f9c74;
-  --color-atlas-500: #1f805a;
-  --color-atlas-600: #146b4b;
-  --color-atlas-700: #0b5c42;
-  --color-atlas-800: #0a4835;
-  --color-atlas-900: #08382a;
+  /* Brand navy, from the BladiSolution Campus logo (#0b2d4c) */
+  --color-navy-50: #eef3f8;
+  --color-navy-100: #d6e2ee;
+  --color-navy-200: #adc4db;
+  --color-navy-300: #7d9fc1;
+  --color-navy-400: #4d77a1;
+  --color-navy-500: #2d5a85;
+  --color-navy-600: #1d466d;
+  --color-navy-700: #143a5d;
+  --color-navy-800: #0f3354;
+  --color-navy-900: #0b2d4c;
+  --color-navy-950: #071d32;
 
-  /* Accent: terracotta clay */
+  /* Accent teal, from the logo (#03aa98). Kept under the historical "atlas" token name.
+     Use 600+ for text on white (contrast), 400-500 for fills and decoration. */
+  --color-atlas-50: #e8f8f5;
+  --color-atlas-100: #c8eee8;
+  --color-atlas-200: #94ddd2;
+  --color-atlas-300: #57c8b9;
+  --color-atlas-400: #1fb5a3;
+  --color-atlas-500: #03aa98;
+  --color-atlas-600: #038c7e;
+  --color-atlas-700: #037267;
+  --color-atlas-800: #065c54;
+  --color-atlas-900: #084b45;
+
+  /* Secondary accent (alerts, supporters) */
   --color-clay-50: #fdf2ec;
   --color-clay-100: #fadfd1;
   --color-clay-200: #f3bea3;
@@ -80,10 +94,10 @@
   @apply rounded-xl px-5 py-3 text-[15px];
 }
 @utility btn-primary {
-  @apply btn bg-atlas-700 text-white hover:bg-atlas-800 active:bg-atlas-900;
+  @apply btn bg-navy-900 text-white hover:bg-navy-800 active:bg-navy-950;
 }
 @utility btn-accent {
-  @apply btn bg-clay-500 text-white hover:bg-clay-600;
+  @apply btn bg-atlas-700 text-white hover:bg-atlas-800 active:bg-atlas-900;
 }
 @utility btn-secondary {
   @apply btn border border-sand-300 bg-white text-sand-800 hover:border-sand-400 hover:bg-sand-50;
@@ -116,7 +130,7 @@
 
 /* Subtle zellige-inspired 8-point star pattern */
 .zellige {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%230b5c42' stroke-opacity='0.07' stroke-width='1.2'%3E%3Crect x='18' y='18' width='20' height='20'/%3E%3Crect x='18' y='18' width='20' height='20' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 0l8 8M56 0l-8 8M0 56l8-8M56 56l-8-8'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%230b2d4c' stroke-opacity='0.05' stroke-width='1.2'%3E%3Crect x='18' y='18' width='20' height='20'/%3E%3Crect x='18' y='18' width='20' height='20' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 0l8 8M56 0l-8 8M0 56l8-8M56 56l-8-8'/%3E%3C/g%3E%3C/svg%3E");
 }
 .zellige-light {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='1.2'%3E%3Crect x='18' y='18' width='20' height='20'/%3E%3Crect x='18' y='18' width='20' height='20' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 0l8 8M56 0l-8 8M0 56l8-8M56 56l-8-8'/%3E%3C/g%3E%3C/svg%3E");

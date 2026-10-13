@@ -1,10 +1,10 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { PageLoader } from './components/ui'
 import { LoginPage, RegisterPage } from './pages/Auth'
-import Discover from './pages/Discover'
 import Home from './pages/Home'
+import MyActivity from './pages/MyActivity'
 import NewProblem from './pages/NewProblem'
 import NewSolution from './pages/NewSolution'
 import NotFound from './pages/NotFound'
@@ -17,8 +17,8 @@ import Settings from './pages/Settings'
 import SolutionDetail from './pages/SolutionDetail'
 import Solutions from './pages/Solutions'
 
-const MapPage = lazy(() => import('./pages/MapPage'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
+// Deferred for the Campus MVP (kept in the codebase, not routed): pages/Discover (merged
+// into Home), pages/MapPage, pages/Dashboard, components/ai (AI insight panels).
 const Moderation = lazy(() => import('./pages/Moderation'))
 
 export default function App() {
@@ -35,9 +35,10 @@ export default function App() {
           <Route path="problems/:id/solutions/new" element={<NewSolution />} />
           <Route path="solutions" element={<Solutions />} />
           <Route path="solutions/:id" element={<SolutionDetail />} />
-          <Route path="discover" element={<Discover />} />
-          <Route path="map" element={<MapPage />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="activity" element={<MyActivity />} />
+          <Route path="discover" element={<Navigate to="/" replace />} />
+          <Route path="map" element={<Navigate to="/problems" replace />} />
+          <Route path="dashboard" element={<Navigate to="/solutions?sort=top" replace />} />
           <Route path="search" element={<Search />} />
           <Route path="u/:username" element={<Profile />} />
           <Route path="settings" element={<Settings />} />

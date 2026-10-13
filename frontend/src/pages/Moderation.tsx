@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { EyeOff, ShieldCheck, ShieldOff } from 'lucide-react'
+import { BadgeCheck, Building2, EyeOff, ShieldCheck, ShieldOff } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Page } from '../components/Layout'
-import { Button, CardSkeleton, EmptyState, ErrorState, Tabs } from '../components/ui'
+import { Avatar, Button, CardSkeleton, EmptyState, ErrorState, Tabs, UserLink } from '../components/ui'
 import { useAuth } from '../hooks/auth'
 import { useDocumentTitle, useToast } from '../hooks/misc'
 import { api, errorMessage } from '../lib/api'
-import { timeAgo } from '../lib/format'
+import { roleLabel, timeAgo } from '../lib/format'
 import type { UserBrief } from '../lib/types'
 
 interface Report {
@@ -21,6 +21,79 @@ interface Report {
   reporter: UserBrief
   created_at: string
   reports_on_target: number
+}
+
+interface OrgAccount extends UserBrief {
+  email: string
+  created_at: string
+}
+
+function OrganizationVerification() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  const [status, setStatus] = useState<'pending' | 'verified'>('pending')
+  const q = useQuery({ queryKey: ['moderation-orgs', status], queryFn: () => api.get<OrgAccount[]>('/moderation/organizations', { status }) })
+  const set = useMutation({
+    mutationFn: ({ id, verified }: { id: number; verified: boolean }) => api.post<OrgAccount>(`/moderation/organizations/${id}`, { verified }),
+    onSuccess: (o) => {
+      qc.invalidateQueries({ queryKey: ['moderation-orgs'] })
+      toast(o.verified ? `${o.name} is verified.` : `Verification removed for ${o.name}.`, o.verified ? 'success' : 'info')
+    },
+    onError: (e) => toast(errorMessage(e), 'error'),
+  })
+  return (
+    <section aria-labelledby="orgs-title" className="mt-8">
+      <h2 id="orgs-title" className="flex items-center gap-2 text-lg font-extrabold text-navy-900">
+        <Building2 className="size-5" aria-hidden /> Organization accounts
+      </h2>
+      <p className="mt-1 text-sm text-sand-600">
+        Verified organizations can express interest in solutions and update their status. Check that the account really represents the organization before
+        verifying it, for example by its email domain or by contacting it.
+      </p>
+      <Tabs
+        label="Organization status"
+        value={status}
+        onChange={setStatus}
+        className="mt-4 w-fit"
+        items={[
+          { value: 'pending' as const, label: 'Waiting' },
+          { value: 'verified' as const, label: 'Verified' },
+        ]}
+      />
+      <div className="mt-4">
+        {q.isLoading ? (
+          <CardSkeleton />
+        ) : q.isError ? (
+          <ErrorState error={q.error} onRetry={() => q.refetch()} />
+        ) : !q.data?.length ? (
+          <p className="card p-5 text-sm text-sand-600">{status === 'pending' ? 'No organization is waiting for verification.' : 'No verified organizations yet.'}</p>
+        ) : (
+          <ul className="card divide-y divide-sand-100">
+            {q.data.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center gap-3 p-4">
+                <Avatar user={o} size={36} />
+                <div className="min-w-0 flex-1">
+                  <UserLink user={o} />
+                  <p className="truncate text-xs text-sand-500">
+                    {roleLabel(o)} · {o.email} · joined {timeAgo(o.created_at)}
+                  </p>
+                </div>
+                {status === 'pending' ? (
+                  <Button size="sm" loading={set.isPending && set.variables?.id === o.id} onClick={() => set.mutate({ id: o.id, verified: true })}>
+                    <BadgeCheck className="size-4" aria-hidden /> Verify
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="secondary" loading={set.isPending && set.variables?.id === o.id} onClick={() => set.mutate({ id: o.id, verified: false })}>
+                    Remove verification
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  )
 }
 
 export default function Moderation() {
@@ -41,12 +114,14 @@ export default function Moderation() {
   if (!user || user.role !== 'admin')
     return (
       <Page>
-        <EmptyState icon={ShieldOff} title="Moderators only" body="This area is reserved for the BladiSolution moderation team." />
+        <EmptyState icon={ShieldOff} title="Moderators only" body="This area is reserved for the BladiSolution Campus moderation team." />
       </Page>
     )
   return (
     <Page className="max-w-4xl">
-      <h1 className="text-2xl font-extrabold tracking-tight">Moderation queue</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-navy-900">Moderation</h1>
+      <OrganizationVerification />
+      <h2 className="mt-10 text-lg font-extrabold text-navy-900">Reports</h2>
       <p className="mt-1 text-sand-600">Reports from the community about problems, solutions, comments and profiles.</p>
       <Tabs
         label="Report status"

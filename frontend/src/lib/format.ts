@@ -58,28 +58,43 @@ export const LEVEL: Record<Level, { label: string; tone: string; bar: number }> 
   critical: { label: 'Critical', tone: 'text-red-700', bar: 4 },
 }
 
+// Individuals are all "community members" in the interface: the citizen/talent split is
+// historical and carries no permissions.
 export const ROLE_LABEL: Record<Role, string> = {
-  citizen: 'Citizen',
-  talent: 'Talent / Innovator',
+  citizen: 'Community member',
+  talent: 'Community member',
   organization: 'Organization',
-  municipality: 'Municipality',
+  municipality: 'Public institution',
   admin: 'Moderator',
 }
 
 export const ORG_KIND_LABEL: Record<string, string> = {
+  university: 'University or school',
+  company: 'Company',
   startup: 'Startup',
+  incubator: 'Incubator or accelerator',
+  foundation: 'Foundation or funder',
   ngo: 'NGO',
   association: 'Association',
-  university_club: 'University club',
-  research_lab: 'Research lab',
-  company: 'Company',
-  municipality: 'Municipality',
+  university_club: 'Student club',
+  research_lab: 'Research center or lab',
   institution: 'Public institution',
+  municipality: 'Local authority',
 }
 
 export function roleLabel(u: { role: Role; org_kind: string | null }) {
   if (u.role === 'organization' && u.org_kind) return ORG_KIND_LABEL[u.org_kind] ?? 'Organization'
   return ROLE_LABEL[u.role]
+}
+
+export function isOrganization(u: { role: Role } | null | undefined) {
+  return !!u && (u.role === 'organization' || u.role === 'municipality')
+}
+
+export const INTEREST_KIND: Record<string, { label: string; verb: string }> = {
+  implementation: { label: 'Implementation', verb: 'Interested in implementing' },
+  sponsorship: { label: 'Sponsorship or funding', verb: 'Interested in sponsoring' },
+  mentorship: { label: 'Mentoring & support', verb: 'Interested in mentoring' },
 }
 
 export const DECISION_ROLES: Role[] = ['municipality', 'organization', 'admin']

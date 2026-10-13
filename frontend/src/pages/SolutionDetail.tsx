@@ -1,38 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Check, ChevronDown, ChevronRight, Coins, ExternalLink, Gavel, History, Link2, Mail, MapPin, Package, Rocket, StickyNote, Trophy, UserPlus, Users } from 'lucide-react'
+import { Building2, ChevronRight, Coins, ExternalLink, Gavel, Handshake, History, Link2, Mail, MapPin, Package, Rocket, Star, StickyNote, Trophy, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ReportButton, ShareButton, StarButton } from '../components/actions'
-import { SummaryCard } from '../components/ai'
 import { CommentThread } from '../components/comments'
 import { Page } from '../components/Layout'
 import { Avatar, Button, CategoryBadge, ErrorState, Field, Modal, PageLoader, SolutionStatusBadge, UserLink } from '../components/ui'
 import { useAuth } from '../hooks/auth'
 import { useDocumentTitle, useToast } from '../hooks/misc'
 import { api, errorMessage } from '../lib/api'
-import { SOLUTION_FLOW, SOLUTION_STATUS, formatDate, num, roleLabel, timeAgo } from '../lib/format'
-import type { AISummary, SolutionDetail as TSolution, SolutionStatus, UserBrief } from '../lib/types'
-
-function Pipeline({ status }: { status: SolutionStatus }) {
-  const idx = SOLUTION_FLOW.indexOf(status)
-  return (
-    <ol className="grid grid-cols-5 gap-1" aria-label={`Status: ${SOLUTION_STATUS[status].label}`}>
-      {SOLUTION_FLOW.map((s, i) => (
-        <li key={s} className="min-w-0">
-          <div className={clsx('h-1.5 rounded-full', i <= idx ? (status === 'implemented' ? 'bg-atlas-600' : 'bg-atlas-500') : 'bg-sand-200')} />
-          <p className={clsx('mt-1.5 hidden truncate text-xs font-semibold sm:block', i === idx ? 'text-sand-900' : i < idx ? 'text-sand-600' : 'text-sand-400')}>
-            {i < idx && <Check className="mr-0.5 inline size-3 text-atlas-600" aria-hidden />}
-            {SOLUTION_STATUS[s].label}
-          </p>
-        </li>
-      ))}
-      <li className="col-span-5 text-xs font-semibold text-sand-700 sm:hidden">
-        Step {idx + 1} of {SOLUTION_FLOW.length} · {SOLUTION_STATUS[status].label}
-      </li>
-    </ol>
-  )
-}
+import { INTEREST_KIND, SOLUTION_FLOW, SOLUTION_STATUS, compact, formatDate, num, roleLabel, timeAgo } from '../lib/format'
+import type { InterestKind, SolutionDetail as TSolution, SolutionStatus, UserBrief } from '../lib/types'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -80,12 +59,12 @@ function DecisionPanel({ s }: { s: TSolution }) {
     { to: 'implemented', label: 'Implemented', icon: Rocket },
   ]
   return (
-    <section className="card overflow-hidden border-atlas-200" aria-labelledby="decide-title">
-      <div className="zellige-light bg-atlas-800 px-5 py-3 text-white">
+    <section className="card overflow-hidden" aria-labelledby="decide-title">
+      <div className="zellige-light bg-navy-900 px-5 py-3 text-white">
         <h2 id="decide-title" className="flex items-center gap-2 text-sm font-bold">
-          <Gavel className="size-4" aria-hidden /> Institution actions
+          <Gavel className="size-4" aria-hidden /> Organization actions
         </h2>
-        <p className="text-xs text-atlas-100">Move this solution along the implementation pipeline.</p>
+        <p className="text-xs text-navy-100">Only change the status when the decision has really been made. The author is notified.</p>
       </div>
       <div className="space-y-3 p-4">
         <div className="grid grid-cols-3 gap-1.5">
@@ -122,13 +101,13 @@ function DecisionPanel({ s }: { s: TSolution }) {
         {status === 'implemented' && (
           <div className="space-y-3 rounded-xl bg-sand-50 p-3">
             <Field label="Where" htmlFor="i-loc" optional>
-              <input id="i-loc" className="input" value={impl.location} onChange={(e) => setImpl({ ...impl, location: e.target.value })} placeholder={`${s.problem.neighborhood ?? ''} ${s.problem.city}`.trim()} />
+              <input id="i-loc" className="input" value={impl.location} onChange={(e) => setImpl({ ...impl, location: e.target.value })} placeholder={[s.problem.neighborhood, s.problem.city].filter(Boolean).join(', ')} />
             </Field>
             <Field label="Impact achieved" htmlFor="i-impact" optional>
               <textarea id="i-impact" rows={2} className="input" value={impl.impact_summary} onChange={(e) => setImpl({ ...impl, impact_summary: e.target.value })} />
             </Field>
             <div className="grid grid-cols-2 gap-2">
-              <Field label="Citizens impacted" htmlFor="i-cit" optional>
+              <Field label="People impacted" htmlFor="i-cit" optional>
                 <input id="i-cit" type="number" min={0} className="input" value={impl.citizens_impacted} onChange={(e) => setImpl({ ...impl, citizens_impacted: e.target.value })} />
               </Field>
               <Field label="Evidence link" htmlFor="i-ev" optional>
@@ -206,6 +185,125 @@ function ContactModal({ s, open, onClose }: { s: TSolution; open: boolean; onClo
         />
       </Field>
     </Modal>
+  )
+}
+
+const INTEREST_KINDS = Object.keys(INTEREST_KIND) as InterestKind[]
+
+function OrganizationsPanel({ s }: { s: TSolution }) {
+  const { user, isDecisionMaker } = useAuth()
+  const qc = useQueryClient()
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [kind, setKind] = useState<InterestKind>(s.my_interest ?? 'implementation')
+  const [message, setMessage] = useState('')
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ['solution', s.id] })
+    qc.invalidateQueries({ queryKey: ['solution-activity', s.id] })
+  }
+  const save = useMutation({
+    mutationFn: () => api.post<{ kind: InterestKind; created: boolean }>(`/solutions/${s.id}/interest`, { kind, message: message.trim() || null }),
+    onSuccess: (r) => {
+      refresh()
+      setOpen(false)
+      toast(r.created ? `${s.author.name} has been notified and can reach you by email.` : 'Your interest was updated.')
+    },
+    onError: (e) => toast(errorMessage(e), 'error'),
+  })
+  const withdraw = useMutation({
+    mutationFn: () => api.del(`/solutions/${s.id}/interest`),
+    onSuccess: () => {
+      refresh()
+      toast('Interest withdrawn.', 'info')
+    },
+    onError: (e) => toast(errorMessage(e), 'error'),
+  })
+  const canAct = s.is_organization && isDecisionMaker && !s.can_edit
+  return (
+    <section id="organizations" className="card p-5" aria-labelledby="orgs-title">
+      <h2 id="orgs-title" className="flex items-center gap-2 text-sm font-bold text-sand-900">
+        <Handshake className="size-4 text-atlas-700" aria-hidden /> Interested organizations <span className="font-semibold text-sand-400">{s.interests.length}</span>
+      </h2>
+      {s.interests.length === 0 ? (
+        <p className="mt-2 text-sm text-sand-600">No organization has expressed interest yet.</p>
+      ) : (
+        <ul className="mt-3 space-y-3">
+          {s.interests.map((i) => (
+            <li key={i.organization.id} className="flex gap-2.5">
+              <Avatar user={i.organization} size={30} />
+              <div className="min-w-0 text-sm">
+                <UserLink user={i.organization} />
+                <p className="text-xs text-sand-500">
+                  {INTEREST_KIND[i.kind]?.verb ?? i.kind} · {timeAgo(i.created_at)}
+                </p>
+                {i.message && <p className="mt-1 rounded-lg bg-sand-50 px-2.5 py-1.5 text-xs text-sand-700">“{i.message}”</p>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 text-xs text-sand-500">Interest means an organization wants to talk with the author. It is not an approval, a contract or funding.</p>
+      {canAct ? (
+        <div className="mt-4 border-t border-sand-100 pt-4">
+          {s.my_interest ? (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+                Update interest
+              </Button>
+              <Button size="sm" variant="ghost" loading={withdraw.isPending} onClick={() => withdraw.mutate()}>
+                Withdraw
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" className="w-full" onClick={() => setOpen(true)}>
+              <Building2 className="size-4" aria-hidden /> Express interest
+            </Button>
+          )}
+        </div>
+      ) : s.is_organization && !isDecisionMaker ? (
+        <p className="mt-4 rounded-xl bg-navy-50 px-3 py-2 text-xs text-navy-900">
+          Your organization account is waiting for verification. Until then you can contact the author directly.
+        </p>
+      ) : !user ? (
+        <p className="mt-3 text-xs text-sand-500">
+          Represent an organization?{' '}
+          <Link to="/register" className="font-semibold text-atlas-700 hover:underline">
+            Create an organization account
+          </Link>
+          .
+        </p>
+      ) : null}
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={`Interest in “${s.title}”`}
+        footer={
+          <Button loading={save.isPending} onClick={() => save.mutate()}>
+            {s.my_interest ? 'Save' : 'Send to the author'}
+          </Button>
+        }
+      >
+        <fieldset>
+          <legend className="label">What would you like to discuss?</legend>
+          <div className="space-y-2">
+            {INTEREST_KINDS.map((k) => (
+              <label key={k} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-sand-200 px-3 py-2.5 text-sm font-semibold text-sand-800 has-[:checked]:border-navy-700 has-[:checked]:bg-navy-50">
+                <input type="radio" name="interest-kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="size-4 accent-navy-900" />
+                {INTEREST_KIND[k].label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="mt-4">
+          <Field label="Message to the author" htmlFor="interest-msg" optional hint="Only the author sees this message.">
+            <textarea id="interest-msg" rows={4} maxLength={1500} className="input" value={message} onChange={(e) => setMessage(e.target.value)} />
+          </Field>
+        </div>
+        <p className="mt-3 text-xs text-sand-500">
+          {s.author.name} is notified with your organization's name and email address. Other visitors only see that your organization is interested.
+        </p>
+      </Modal>
+    </section>
   )
 }
 
@@ -309,6 +407,7 @@ const ACTIVITY_LABEL: Record<string, (a: { actor: UserBrief; meta: Record<string
   updated_solution: () => 'updated the proposal',
   joined_solution: () => 'joined the team',
   changed_solution_status: (a) => `moved it to ${SOLUTION_STATUS[(a.meta?.new as SolutionStatus) ?? 'proposed']?.label ?? a.meta?.new}`,
+  expressed_interest: () => 'expressed interest',
 }
 
 export default function SolutionDetail() {
@@ -316,20 +415,11 @@ export default function SolutionDetail() {
   const sid = Number(id)
   const { requireAuth } = useAuth()
   const qc = useQueryClient()
-  const [expanded, setExpanded] = useState(false)
   const [contact, setContact] = useState(false)
   const q = useQuery({ queryKey: ['solution', sid], queryFn: () => api.get<TSolution>(`/solutions/${sid}`) })
   const activity = useQuery({
     queryKey: ['solution-activity', sid],
     queryFn: () => api.get<{ id: number; verb: string; actor: UserBrief; meta: Record<string, string> | null; created_at: string }[]>(`/solutions/${sid}/activity`),
-  })
-  // The server upgrades local summaries to Claude summaries in the background; ask once if needed.
-  const summary = useQuery({
-    queryKey: ['summary', sid],
-    queryFn: () => api.post<AISummary>('/ai/summarize-solution', { solution_id: sid }),
-    enabled: !!q.data,
-    initialData: q.data?.ai_summary ?? undefined,
-    staleTime: 10 * 60_000,
   })
   useDocumentTitle(q.data?.title)
 
@@ -341,7 +431,6 @@ export default function SolutionDetail() {
       </Page>
     )
   const s = q.data
-  const long = (s.approach + s.impact + s.implementation_plan).length > 600
 
   return (
     <Page wide>
@@ -362,7 +451,7 @@ export default function SolutionDetail() {
               <div className="zellige-light flex flex-wrap items-center gap-x-3 gap-y-1 bg-atlas-800 px-5 py-3 text-sm text-white sm:px-7">
                 <Rocket className="size-4" aria-hidden />
                 <span className="font-bold">Implemented</span>
-                <span className="text-atlas-100">
+                <span className="text-atlas-50">
                   by {s.implementation.organization.name} · {formatDate(s.implementation.implemented_at)}
                 </span>
               </div>
@@ -381,26 +470,28 @@ export default function SolutionDetail() {
             <div className="p-5 sm:p-7">
               <div className="flex flex-wrap items-center gap-2.5">
                 <CategoryBadge category={s.problem.category} size="md" link />
-                <SolutionStatusBadge status={s.status} />
+                {s.status !== 'proposed' && <SolutionStatusBadge status={s.status} />}
               </div>
               <div className="mt-3 flex items-start justify-between gap-4">
-                <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-sand-900 sm:text-3xl">{s.title}</h1>
+                <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-navy-900 sm:text-3xl">{s.title}</h1>
               </div>
               <div className="mt-3 flex items-center gap-2.5 text-sm">
                 <Avatar user={s.author} size={32} />
                 <span className="min-w-0 text-sand-600">
-                  <UserLink user={s.author} /> <span className="text-sand-400">· {s.author.headline || roleLabel(s.author)}</span>
+                  <UserLink user={s.author} /> <span className="text-sand-400">· {s.author.affiliation || s.author.headline || roleLabel(s.author)}</span>
                   <span className="block text-xs text-sand-400 sm:inline">
                     {' '}
                     · Posted {timeAgo(s.created_at)}
-                    {s.updated_at !== s.created_at && ` · updated ${timeAgo(s.updated_at)}`}
                   </span>
                 </span>
               </div>
 
-              <div className="mt-5">
-                <Pipeline status={s.status} />
-              </div>
+              <p className="mt-4 rounded-xl bg-sand-50 px-4 py-2.5 text-sm text-sand-700">
+                Solves{' '}
+                <Link to={`/problems/${s.problem.id}`} className="font-semibold text-navy-800 hover:underline">
+                  {s.problem.title}
+                </Link>
+              </p>
               {s.status_note && (
                 <p className="mt-3 flex gap-2 rounded-xl bg-sand-50 px-4 py-2.5 text-sm text-sand-700">
                   <StickyNote className="mt-0.5 size-4 shrink-0 text-sand-400" aria-hidden /> {s.status_note}
@@ -408,14 +499,20 @@ export default function SolutionDetail() {
               )}
 
               <div className="mt-6 flex flex-wrap items-center gap-2 border-y border-sand-100 py-4">
-                <StarButton solutionId={s.id} starred={s.starred} count={s.stars_count} size="lg" />
+                {s.can_star ? (
+                  <StarButton solutionId={s.id} starred={s.starred} count={s.stars_count} size="lg" />
+                ) : (
+                  <span className="inline-flex items-center gap-2 rounded-xl bg-sand-50 px-4 py-2.5 text-[15px] font-bold text-sand-700 ring-1 ring-sand-200" title="You can't star your own solution">
+                    <Star className="size-5 fill-saffron-400 text-saffron-500" aria-hidden /> {compact(s.stars_count)} star{s.stars_count === 1 ? '' : 's'}
+                  </span>
+                )}
                 <a href="#discussion" className="btn btn-md btn-secondary">
                   Comment <span className="text-sand-400">{s.comments_count}</span>
                 </a>
                 <ShareButton title={s.title} path={`/solutions/${s.id}`} />
                 {!s.can_edit && (
                   <Button variant="secondary" onClick={() => requireAuth() && setContact(true)}>
-                    <Mail className="size-4" aria-hidden /> Contact Contributor
+                    <Mail className="size-4" aria-hidden /> Contact the author
                   </Button>
                 )}
                 <div className="ml-auto">{s.can_edit ? <AuthorStatus s={s} /> : <ReportButton targetType="solution" targetId={s.id} />}</div>
@@ -426,7 +523,7 @@ export default function SolutionDetail() {
                   {s.implementation.citizens_impacted ? (
                     <div className="sm:border-r sm:border-atlas-200 sm:pr-6">
                       <div className="text-3xl font-extrabold text-atlas-800 tabular-nums">{num(s.implementation.citizens_impacted)}</div>
-                      <div className="text-xs font-semibold text-atlas-700">citizens impacted</div>
+                      <div className="text-xs font-semibold text-atlas-700">people impacted (reported by {s.implementation.organization.name})</div>
                     </div>
                   ) : null}
                   <div className="text-sm text-atlas-900">
@@ -445,28 +542,17 @@ export default function SolutionDetail() {
                 </div>
               )}
 
-              <div className="mt-6">{summary.data && <SummaryCard summary={summary.data} />}</div>
-
               <div className="mt-6 space-y-6">
-                <Section title="Description">{s.description}</Section>
-                <div className={clsx('relative space-y-6', long && !expanded && 'max-h-56 overflow-hidden')}>
-                  <Section title="How it works">{s.approach}</Section>
-                  <Section title="Expected impact">{s.impact}</Section>
-                  <Section title="Implementation plan">{s.implementation_plan}</Section>
-                  {long && !expanded && <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white" aria-hidden />}
-                </div>
-                {long && (
-                  <Button variant="secondary" size="sm" onClick={() => setExpanded((e) => !e)} aria-expanded={expanded}>
-                    <ChevronDown className={clsx('size-4 transition-transform', expanded && 'rotate-180')} aria-hidden />
-                    {expanded ? 'Collapse proposal' : 'Read the full proposal'}
-                  </Button>
-                )}
+                <Section title="Proposed approach">{s.description}</Section>
+                {s.approach && <Section title="How it works">{s.approach}</Section>}
+                {s.impact && <Section title="Expected impact">{s.impact}</Section>}
+                {s.implementation_plan && <Section title="Implementation plan">{s.implementation_plan}</Section>}
                 {(s.resources || s.estimated_cost) && (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {s.resources && (
                       <div className="rounded-xl bg-sand-50 p-4">
                         <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-sand-500 uppercase">
-                          <Package className="size-3.5" aria-hidden /> Resources
+                          <Package className="size-3.5" aria-hidden /> Resources or budget
                         </p>
                         <p className="mt-1 text-sm text-sand-800">{s.resources}</p>
                       </div>
@@ -505,15 +591,18 @@ export default function SolutionDetail() {
         <aside className="space-y-5">
           {s.can_decide && <DecisionPanel key={s.status} s={s} />}
 
+          <OrganizationsPanel key={s.my_interest ?? 'none'} s={s} />
+
           <section className="card p-5" aria-label="Problem addressed">
             <p className="text-[11px] font-bold tracking-wide text-sand-500 uppercase">Problem addressed</p>
             <Link to={`/problems/${s.problem.id}`} className="mt-1.5 block leading-snug font-bold text-sand-900 hover:text-atlas-800">
               {s.problem.title}
             </Link>
-            <p className="mt-1 flex items-center gap-1 text-xs text-sand-500">
-              <MapPin className="size-3" aria-hidden /> {s.problem.city}
-              {s.problem.neighborhood && ` · ${s.problem.neighborhood}`}
-            </p>
+            {s.problem.city && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-sand-500">
+                <MapPin className="size-3" aria-hidden /> {[s.problem.neighborhood, s.problem.city].filter(Boolean).join(', ')}
+              </p>
+            )}
             {s.problem.description && <p className="mt-2 line-clamp-4 text-sm text-sand-600">{s.problem.description}</p>}
             <Link
               to={`/problems/${s.problem.id}?tab=latest#solutions`}

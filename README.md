@@ -1,62 +1,44 @@
-# BladiSolution
+<p align="center"><img src="frontend/public/BladiSolution_logo.png" alt="BladiSolution Campus" height="80"></p>
 
-> **Turn Local Problems Into Real Solutions.**
-> *Where communities meet solutions.*
+# BladiSolution Campus
 
-**BladiSolution** is an open civic innovation platform. Citizens, talents, organizations and municipalities publish local problems, propose solutions, collaborate in public, and help the best solutions gain visibility through community support. Institutions then evaluate, select and implement them.
+> **Real Problems. Collective Intelligence. Practical Solutions.**
 
-**Bladi** (بلادي) means *"my country / my community"* in Moroccan Darija. The platform starts with Moroccan cities and is built to work for any African city.
+**BladiSolution Campus** helps people discover real challenges, share ideas for solving them, and see which solutions the community supports most. It also gives organizations a simple way to say they want to take a promising solution further.
+
+* **BladiSolution** is the long-term vision: a platform where communities, institutions, companies and other organizations across Morocco publish real problems, and the people able to solve them (students, developers, engineers, researchers, startups) step forward, with partners able to support, fund or implement the best solutions.
+* **BladiSolution Campus** is its first version. It starts with students and university communities in Morocco, and anyone can propose solutions, including developers, researchers, startups and other professionals. Problems are **not** limited to campus or academic topics: a student can post a national agriculture problem as easily as a campus accessibility one.
+
+*Bladi* (بلادي) means "my country / my community" in Moroccan Darija. The project began as a prototype for the ASCIC Hackathon 2026; see the git history for that version.
 
 ```
-LOCAL PROBLEM → OPEN CHALLENGE → COMMUNITY SOLUTIONS → STARS + DISCUSSION
-      → DISCOVERY BY ORGANIZATIONS → SELECTION → IMPLEMENTATION → REAL-WORLD IMPACT
+PROBLEM  →  SOLUTIONS  →  STARS (community interest)  →  ORGANIZATION INTEREST  →  IMPLEMENTATION
 ```
-
-Built for the **African Smart City Innovation Conference (ASCIC) Hackathon 2026**.
 
 ---
 
-## The problem
+## What the MVP does
 
-Every city has problems, and citizens know about them: *"The waste containers near the market overflow every weekend."*
-Students, engineers, startups, NGOs and researchers have the skills and ideas to fix them. Municipalities have the resources to implement fixes.
-
-These people rarely meet around the same problem. Complaints vanish into phone lines and paper forms, good ideas stay in hackathon repos, and institutions can't see which solutions the community actually supports.
-
-## The solution
-
-BladiSolution is the digital layer that connects them. A complaint becomes an **open civic challenge**:
-
-1. A **citizen** reports a problem. AI structures it (category, urgency, frequency, affected population) and detects duplicates so support concentrates instead of fragmenting.
-2. **Talents and organizations** propose concrete solutions: approach, impact, implementation plan, required skills, cost.
-3. The **community** discusses the solutions and **stars** the ones it believes in. Contributors form teams.
-4. **Municipalities and organizations** use a dashboard to find top community-backed solutions and move them through a public pipeline: *Proposed → Developing → Under Evaluation → Selected → Implemented*.
-5. Implemented solutions record **real-world impact** (citizens impacted, location, evidence). Contributors earn reputation from outcomes, not just popularity.
-
-It is **not** a complaint ticketing system, a social network or a voting app. It is GitHub Issues for the city, combined with community participation and smart-city intelligence.
-
----
-
-## Key features
-
-| Area | What works |
+| Area | Behaviour |
 |---|---|
-| **Problems** | Create with category, city, neighbourhood, map pin, urgency, impact, tags and photo. Statuses: Open, Under Review, In Progress, Solved, Archived. Official challenges for institutions. Support, follow, share, report. |
-| **AI analysis** | Extracts category and subcategory, frequency, urgency, impact areas, affected groups and an estimated count, locations and keywords. "Apply suggestions" fills the form for you. |
-| **Duplicate detection** | Live while typing. Shows similarity %, location, supporters and solutions, with **Support Existing Problem** or **Create New Problem**. Problems are never merged automatically. |
-| **Solutions** | Detailed proposals: description, how it works, impact, implementation plan, skills, resources, cost, links. Public by default. |
-| **Stars** | GitHub-style: one star per user per solution, optimistic UI, milestone notifications (1, 5, 10, 25, …). |
-| **Ranking** | Per problem: **Top · Latest · Discussed · Implemented**. Global feed: Latest · Trending · Top · Discussed · Implemented, filterable by category, city, neighbourhood, status, skill and date. Trending is time-decayed so old popular solutions can't dominate forever. |
-| **Collaboration** | "Ask to collaborate" → the author accepts or declines. Contact a contributor (sends your name and email). Team list on every solution. |
-| **Discussion** | Comments with one level of replies on problems and solutions. Delete your own comments; report others. |
-| **Following & notifications** | Follow problems, contributors, organizations and categories. The notification center is fed only by real events: new solution, star milestone, comment, reply, collaboration request or acceptance, evaluated, selected, implemented, contact, new follower. |
-| **Profiles & reputation** | Skills, bio, focus areas. Impact metrics: implemented solutions, citizens impacted, stars, selections. Reputation weights real outcomes (implemented ×120, selected ×50) far above stars (×1). |
-| **AI matching** | "Potential contributors" on each problem, matched on skills, solution history in the category, and location, with a stated reason for each match. |
-| **AI summaries** | Every solution gets a summary (Problem / Solution / How / Impact / Required) above the full proposal, which expands on demand. |
-| **Municipality dashboard** | KPIs, problems and solutions by category, pipeline, problems by city, 12-week participation (with a data table view), top problems, top solutions with one-click decisions, decision board, recent activity. Filterable by city. |
-| **Map** | OpenStreetMap / Leaflet. Problem markers coloured by category and sized by urgency, or a city-intensity view (high / medium / low). Clicking a marker opens the problem. |
-| **Search & discovery** | Global search across problems, solutions, people, organizations and tags (`waste Rabat`, `Python`, `urban planning`). The Discover page shows trending and latest problems and solutions, recent implementations, top contributors, active organizations and a live activity feed. |
-| **Moderation** | Report problems, solutions, comments or profiles (spam, harassment, inappropriate, misinformation, duplicate, other). Moderator queue with hide or dismiss. |
+| **Discovery** | Public home page with recent problems, the most-starred solutions and a domain directory. Visitors can browse every problem and solution without an account. |
+| **Problems** | Title, description, one of 11 domains, optional city, optional place or affected community, optional photo. While you type, similar existing problems are shown so you can support one instead of creating a duplicate. |
+| **Solutions** | Title and proposed approach (required); implementation plan, resources or budget, and links (optional). Existing solutions are listed beside the form. Any signed-in user can propose; several solutions per problem are welcome. |
+| **Stars** | One star per person per solution, stored as a row with a composite primary key. Authors can't star their own solutions. Users can un-star. The displayed count is recomputed from the stored rows. |
+| **Ranking** | **Most supported** (stars, then newest, then id) and **Newest**, with the same rule on the problem page, the global feed and the home page. Stars indicate interest, not a technical review, and the UI says so. |
+| **Search & filters** | Keyword search and domain filter on problems and solutions. Problems also have a "Needs solutions" sort. |
+| **Organizations** | Organizations register with their own account type. A moderator **verifies** them before they can (a) express interest in a solution (*implementation*, *sponsorship or funding*, or *mentoring & support*), which notifies the author with the organization's contact email, or (b) update a solution's status (evaluated / selected / implemented). Interest is shown publicly as interest, never as approval or funding. |
+| **My Activity** | Your problems, your solutions and the solutions you starred, plus notifications. |
+| **Discussion & teams** | Comments with one level of replies, "Ask to collaborate" with author approval, and "Contact the author". |
+| **Moderation** | Reports (spam, harassment, …) with hide or dismiss; organization verification queue. |
+
+### Domains
+
+Technology & Digital · Environment & Sustainability · Transportation & Mobility · Healthcare · Agriculture & Food · Energy · Public Services & Governance · Business & Entrepreneurship · Education & Campus · Social Impact & Accessibility · Other.
+
+### Deferred from the MVP interface (code kept)
+
+These prototype features still exist in the backend and source tree, but are no longer linked from the interface to keep the first version simple: the analytics dashboard (`/dashboard`), the problem map (`/map`), the separate Discover page (merged into Home), AI insight and contributor-matching panels, AI solution summaries, reputation scores, following users and domains, and urgency or impact ratings. The old URLs redirect to the matching MVP page. The API endpoints still work, so nothing that depends on them breaks.
 
 ---
 
@@ -67,88 +49,87 @@ It is **not** a complaint ticketing system, a social network or a voting app. It
 │  React 19 + TypeScript   │  /api  │  FastAPI (Python 3.12)                    │
 │  Vite · Tailwind CSS 4   │ ─────► │  routers: auth, users, problems,          │
 │  TanStack Query · Router │ cookie │  solutions, notifications, discover,      │
-│  Leaflet · Recharts      │  (JWT) │  dashboard, ai, moderation, uploads       │
-└──────────────────────────┘        │                                           │
-        nginx (Docker)              │  services/                                │
-                                    │   ├─ ai/  AIService ─┬─ LocalAIService    │
-                                    │   │                  └─ ClaudeAIService   │
-                                    │   ├─ events  (activity + notifications)   │
-                                    │   └─ ranking (time-decayed trending)      │
+│                          │  (JWT) │  dashboard, ai, moderation, uploads       │
+└──────────────────────────┘        │  services/ ai · events · ranking          │
+        nginx (Docker)              │  migrations.py (idempotent, on startup)   │
                                     │  SQLAlchemy 2 ──► PostgreSQL 16           │
                                     └───────────────────────────────────────────┘
 ```
 
-* **Frontend** (`frontend/`): React 19, TypeScript, Vite 8, Tailwind CSS 4, TanStack Query for caching, pagination and optimistic updates, React Router 7, Leaflet with OpenStreetMap tiles (no API key), and Recharts. The map and chart pages are code-split.
-* **Backend** (`backend/`): FastAPI, SQLAlchemy 2, PostgreSQL (SQLite also works, which the tests use), bcrypt password hashing, and JWT sessions in an httpOnly, SameSite=Lax cookie.
+* **Frontend** (`frontend/`): React 19, TypeScript, Vite, Tailwind CSS 4 (theme tokens in `src/index.css`: brand navy `#0b2d4c` and teal `#03aa98`, taken from the logo), TanStack Query, React Router 7.
+* **Backend** (`backend/`): FastAPI, SQLAlchemy 2, PostgreSQL (SQLite works too), bcrypt, JWT sessions in an httpOnly SameSite=Lax cookie.
 * **Deployment**: Docker Compose runs Postgres, the API, and nginx serving the SPA and proxying `/api`.
+
+### Logo
+
+| File | Use |
+|---|---|
+| `frontend/public/BladiSolution_logo.png` | Full "BladiSolution Campus" wordmark (675×160, transparent). Used in the header, footer, sign-in and registration pages, and as the social preview image. Rendered by `src/components/Logo.tsx` at a fixed height so it keeps its aspect ratio. |
+| `frontend/public/BladiSolution_icon.png` | Square mark (256×256, transparent). |
+| `frontend/public/favicon.png`, `apple-touch-icon.png` | Browser and home-screen icons (mark on a white tile, so it stays visible on dark tabs). |
+| `frontend/public/BladiSolutionlogo1.png`, `BladiSolutionlogo2.png` | Original brand files the assets above were generated from (white background removed, trimmed, resized). |
+
+To change the logo, replace `BladiSolution_logo.png` with a transparent PNG of a similar shape (about 4.2:1). If the ratio changes, update `LOGO_RATIO` in `Logo.tsx`.
 
 ### AI components
 
-All AI goes through a provider-agnostic `AIService` interface (`backend/app/services/ai/`):
+All AI goes through a provider-agnostic `AIService` (`backend/app/services/ai/`). In the MVP interface only the **duplicate check** is used: it runs locally (TF-IDF with a multilingual synonym map), instantly, with no external calls. Problem analysis, solution summaries and contributor matching still run in the background and through `/api/ai/*`, using Claude when `ANTHROPIC_API_KEY` is set and falling back to the deterministic local engine otherwise (`AI_PROVIDER=auto|claude|local`).
 
-```
-AIService
- ├── analyze_problem()          Claude (structured output) → local fallback
- ├── detect_similar_problems()  local TF-IDF + synonym canonicalisation (instant, runs while typing)
- ├── summarize_solution()       Claude (structured output) → local fallback
- └── match_contributors()       local skill / category / history / location scoring (explainable)
-```
+### Database and migrations
 
-* **`LocalAIService`** is deterministic and runs offline. It includes a multilingual tokenizer (English, French and common Darija transliterations such as *zbel*), a synonym map so that *"garbage bins are full"* ≈ *"waste containers overflow"*, TF-IDF cosine similarity with city and neighbourhood boosts, weighted category signals, frequency and urgency patterns, and population-group detection.
-* **`ClaudeAIService`** uses Claude (`claude-opus-5-5` by default) through the official `anthropic` SDK with Pydantic structured outputs, low effort for latency, and server-side refusal fallbacks. Any failure (missing key, timeout, rate limit, invalid output) **silently falls back** to the local engine, and the UI says *"AI analysis is temporarily unavailable — showing the local engine's analysis."*
-* Problem analyses and solution summaries are computed locally at creation time (so they are instant) and upgraded by Claude in a background task when a key is configured.
-* The provider is selected with `AI_PROVIDER=auto|claude|local`.
+Tables: `User` (individuals and organizations; organizations have `org_kind` and a `verified` flag), `Category` (the domains), `Tag`, `Problem`, `Solution`, `SolutionStar`, `OrganizationInterest`, `SolutionContributor`, `Implementation`, `Comment`, `ProblemSupport`, `ProblemFollower`, `UserFollow`, `CategoryFollow`, `Notification`, `Activity`, `Report`.
 
-### Database
+Tables are created by SQLAlchemy (`create_all`). Changes that `create_all` can't make are applied by **`backend/app/migrations.py`** on every startup. Each step checks the current state first, so it is idempotent, and no step deletes user data:
 
-`User` (citizens, talents, organizations and municipalities; organizations are users with `org_kind`), `Category`, `Tag`, `Problem`, `ProblemTag`, `Solution`, `SolutionTag`, `SolutionContributor`, `Implementation`, `Comment`, `ProblemSupport`, `ProblemFollower`, `SolutionStar`, `UserFollow`, `CategoryFollow`, `Notification`, `Activity`, `Report`.
+1. **Add `users.affiliation`** (nullable) when it is missing.
+2. **Remap the prototype's 12 categories onto the 11 domains** (`waste→environment`, `urban-planning→governance`, `public-safety→governance`, `economic-development→business`, `tourism-heritage→business`, `social-inclusion→social-impact`). Problems are updated in place. Duplicate follows that end up on the same domain are merged. Old category rows are removed only once nothing references them. The API still accepts the old slugs and maps them.
 
-Counters (`stars_count`, `supporters_count`, `solutions_count`, …) are denormalized and updated atomically, so feeds sort on indexed columns. Composite primary keys enforce *one star / one support / one follow per user*.
+Rehearsed on PostgreSQL 16 against a database created by the original prototype: every user, problem, solution, star, comment, support and notification count was identical before and after. Category follows went from 10 to 8 because two duplicate pairs were merged. A second run changed nothing.
 
 ### API (all under `/api`; interactive docs at `/api/docs`)
 
+Unchanged prototype endpoints keep their contracts. Additions and changes for Campus:
+
 ```
-POST /auth/register · POST /auth/login · POST /auth/logout · GET /auth/me
-GET  /problems?sort=trending|latest|supported|discussed|unsolved&category&city&status&official&q
-POST /problems · GET|PATCH|DELETE /problems/{id} · GET /problems/map
-POST|DELETE /problems/{id}/support · POST|DELETE /problems/{id}/follow
-GET|POST /problems/{id}/solutions?sort=top|latest|discussed|implemented|trending
-GET|POST /problems/{id}/comments
-GET  /solutions?sort=…&category&city&neighborhood&status&skill&since · /solutions/latest|trending|top
-GET|PATCH /solutions/{id} · PATCH /solutions/{id}/status · GET /solutions/{id}/activity
-POST|DELETE /solutions/{id}/star · GET|POST /solutions/{id}/comments
-POST /solutions/{id}/contact · POST /solutions/{id}/collaborate · POST /solutions/{id}/collaborators/{user_id}
-POST /ai/analyze-problem · /ai/similar-problems · /ai/summarize-solution · /ai/match-contributors · GET /ai/status
-GET  /users · /users/{username} · /users/{username}/solutions|problems · PATCH /users/me
-POST|DELETE /users/{username}/follow · /categories/{slug}/follow · GET /me/following
-GET  /notifications · /notifications/unread-count · POST /notifications/read-all · /notifications/{id}/read
-GET  /discover · /activity · /search · /stats · /meta · /dashboard
-POST /reports · GET /moderation/reports · POST /moderation/reports/{id} · DELETE /comments/{id}
-POST /uploads
+POST   /auth/register                  role ∈ citizen|talent|organization (organizations start unverified), + affiliation
+PATCH  /users/me                       role can no longer be changed here; + affiliation
+GET    /me/starred                     solutions the current user starred
+GET    /solutions?q=…                  keyword search on the global feed
+POST   /solutions/{id}/star            400 for the author's own solution; count recomputed from rows
+POST   /solutions/{id}/interest        {kind: implementation|sponsorship|mentorship, message?}, verified organizations only
+DELETE /solutions/{id}/interest
+GET    /solutions/{id}                 + interests[], my_interest, can_star, is_organization
+POST   /problems, /problems/{id}/solutions   an identical resubmission within 10 min returns the first one (200)
+GET    /moderation/organizations?status=pending|verified        admin
+POST   /moderation/organizations/{id}  {verified: bool}         admin
 ```
 
 ### Security
 
-* Passwords are hashed with bcrypt (12 rounds). Sessions are signed JWTs in an **httpOnly, SameSite=Lax** cookie (`Secure` when `COOKIE_SECURE=true`). Tokens are never exposed to JavaScript.
-* Every write is checked server-side: authors edit their own content; only organizations, municipalities and admins can evaluate, select or implement; authors can move only their own solutions between Proposed and Developing; moderation requires the admin role.
-* Pydantic validates every payload (lengths, enums, URL schemes) and strips control characters. User content is always rendered as text, never as HTML.
-* Uploads accept only JPEG, PNG or WebP verified by **magic bytes** (the declared content type is ignored), up to 5 MB, saved under random names.
-* Sliding-window **rate limiting** on login, registration, content creation, comments, stars, reports, uploads and AI endpoints.
-* Security headers (`nosniff`, `X-Frame-Options`, `Referrer-Policy`). Errors are friendly JSON with no stack traces. The API refuses to start in production with the default JWT secret.
-* In production, organization and municipality accounts should be verified before they get decision rights. The `verified` flag and badge are already in place.
+* bcrypt passwords and httpOnly JWT cookies; every write is authorized server-side.
+* **No self-assigned privileges**: registration accepts only individual or organization accounts, `PATCH /users/me` ignores role changes, and organization rights (status changes, interest, organization challenges) require `verified=true`, which only an admin can set. This fixes the prototype's privilege-escalation path.
+* **Rate limiting** identifies clients by socket address. `X-Forwarded-For` is only trusted when `TRUST_FORWARDED_FOR=true`, which Docker Compose sets for the bundled nginx (it overwrites the header).
+* Pydantic validation with control-character stripping. Uploads are checked by magic bytes, up to 5 MB. Security headers are set. The API refuses to start in production with the default JWT secret.
+* Interest messages are visible only to the solution's author and the organization. The organization's email is shared only with the author it contacts.
 
 ---
 
-## Quick start (Docker, recommended)
+## Running it
+
+### Docker (recommended)
 
 ```bash
-cp .env.example .env          # optional: set JWT_SECRET, ANTHROPIC_API_KEY
+cp .env.example .env          # set JWT_SECRET and POSTGRES_PASSWORD; ANTHROPIC_API_KEY is optional
 docker compose up --build
 ```
 
-Open **http://localhost:8080**. On first start the empty database is seeded with the demo dataset automatically.
+Open **http://localhost:8080**. The database starts **empty**: real deployments show only real content. To make yourself a moderator, register normally, then run:
 
-## Local development
+```bash
+docker compose exec db psql -U bladi bladisolution -c "UPDATE users SET role='admin' WHERE email='you@example.com';"
+```
+
+### Local development
 
 Requirements: Python 3.12+, Node 20+, and Docker (only for Postgres).
 
@@ -161,7 +142,7 @@ docker run -d --name bladi-pg -e POSTGRES_USER=bladi -e POSTGRES_PASSWORD=bladi 
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp ../.env.example .env        # edit if needed
+cp ../.env.example .env
 uvicorn app.main:app --reload --port 8000
 
 # 3. Web app  →  http://localhost:5173  (proxies /api to :8000)
@@ -170,112 +151,57 @@ npm install
 npm run dev
 ```
 
-Reset the demo data at any time with `python -m app.seed --reset` (from `backend/`).
+### Fictional demo data (development only)
 
-## Environment variables
+`python -m app.seed --reset` (from `backend/`) loads a **fictional** dataset: made-up people, organizations (pre-verified), stars and implementations. It is meant for development and tests only, never for a database real users see. It is not loaded automatically unless `SEED_ON_STARTUP=true`. In development builds the sign-in page offers shortcuts to its accounts (password `demo1234`, for example `talent@bladisolution.ma`, `org@bladisolution.ma`, `admin@bladisolution.ma`). Production builds don't show them.
 
-Every variable is documented in [`.env.example`](.env.example). The main ones:
+`demo/record-demo.mjs` records a narrated walkthrough video. It was written for the original prototype's screens and needs updating before it can record the Campus interface.
+
+### Environment variables
+
+Every variable is documented in [`.env.example`](.env.example).
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `DATABASE_URL` | `postgresql+psycopg://bladi:bladi@localhost:5433/bladisolution` | SQLAlchemy URL (Postgres or SQLite) |
 | `JWT_SECRET` | dev value | **Must be set in production** |
 | `COOKIE_SECURE` | `false` | `true` behind HTTPS |
-| `AI_PROVIDER` | `auto` | `auto`, `claude` or `local` |
-| `ANTHROPIC_API_KEY` | — | Enables Claude for analysis and summaries |
-| `AI_MODEL` | `claude-opus-5-5` | Claude model ID |
-| `SEED_ON_STARTUP` | `true` | Seed demo data when the DB is empty |
+| `SEED_ON_STARTUP` | `false` | Load the fictional demo dataset into an empty database |
+| `TRUST_FORWARDED_FOR` | `false` | Trust `X-Forwarded-For` (only behind a proxy that sets it; Compose sets `true`) |
 | `RATE_LIMIT_ENABLED` | `true` | In-memory rate limiting |
+| `AI_PROVIDER` / `ANTHROPIC_API_KEY` / `AI_MODEL` | `auto` / — / `claude-opus-5-5` | Background AI features (optional) |
 
-## Demo accounts
-
-Password for every account: **`demo1234`**. The login page has one-click buttons for each of them.
-
-| Role | Account | Who |
-|---|---|---|
-| Citizen | `citizen@bladisolution.ma` | Salma Benali, Agdal, Rabat |
-| Talent | `talent@bladisolution.ma` | Youssef Amrani, full-stack and IoT engineer |
-| Organization | `org@bladisolution.ma` | GreenRabat Association (NGO) |
-| Municipality | `city@bladisolution.ma` | Rabat Municipal Innovation Office |
-| Moderator | `admin@bladisolution.ma` | Moderation team |
-
-All featured seed users (for example `amine@bladisolution.ma`) also use `demo1234`. All people and organizations in the dataset are fictional.
-
-### Seed data
-
-38 featured users (citizens, talents, startups, NGOs, labs and three municipal units) plus 420 lightweight community members, so star and support counts are backed by real rows. The data covers 27 problems across all 12 Smart City categories in 8 cities (Rabat, Casablanca, Salé, Marrakech, Fès, Tangier, Agadir, Laâyoune), with 44 solutions, 60 hand-written comments, about 3,600 stars, implementations with measured impact, and an activity feed and notifications derived from those events.
-
-## Hackathon demo flow
-
-1. **Problem**: open *Overflowing Waste Containers Around a Market* (Rabat · Akkari) to show location, impact, supporters and AI insight, with 3 solutions: *AI Waste Overflow Prediction* (342 stars), *Smart IoT Containers* (218), *Community Recycling Network* (96).
-2. **AI**: sign in as Citizen Demo, go to **New → Submit a Problem** and type *"Garbage bins near the market are always full"*. The similar-problem panel finds the flagship. Click *Analyze with AI* → *Apply suggestions*, then *Publish*. The modal says *"We found a potentially similar problem"*; choose **Support Existing Problem**.
-3. **Solutions**: as Talent Demo, submit a solution to the flagship, then click **Latest**. The new solution is on top with a *New* badge, and the citizen receives a notification.
-4. **Community**: star a solution (the count changes instantly) and add a comment.
-5. **Ranking**: switch to **Top**. Solutions are ordered by community stars.
-6. **Municipality**: as Municipality Demo, open the **Dashboard** and the top community-supported solutions. Change *AI Waste Overflow Prediction* from *Under Evaluation* to **Selected**. The author is notified.
-7. **Impact**: on the solution page use *Institution actions* → **Implemented** and enter the citizens impacted. The solution shows *Implemented by Rabat Municipal Innovation Office* with its impact, and the problem becomes *Solved*.
-
-> **BladiSolution turns local problems into collective action.**
-
-To reset the data after a rehearsal, run `docker compose exec backend python -m app.seed --reset` (or `python -m app.seed --reset` locally).
-
-## Demo video
-
-`demo/record-demo.mjs` uses Playwright to record a **narrated, captioned walkthrough** of every feature: landing page, exploration, AI analysis and duplicate detection, problem submission with a map pin, solutions, stars, comments, contact, collaboration, feeds, notifications, profiles, search, discovery, the map, the municipality dashboard and implementation, official challenges, moderation, and the mobile UI. The walkthrough plays as the citizen, talent, municipality and moderator demo accounts.
-
-The voiceover reads each on-screen caption. It is generated offline with [Piper](https://github.com/rhasspy/piper) (neural TTS, `en_US-lessac-high` voice), and the recording waits for each line to finish so voice and picture stay in sync.
-
-Requirements: the app running locally, Google Chrome, ffmpeg and Python 3.12 (with [uv](https://docs.astral.sh/uv/)).
-
-```bash
-cd demo
-npm install                                    # also downloads Playwright's video encoder
-uv venv .tts -p 3.12 && uv pip install -p .tts piper-tts
-mkdir -p voices && for f in en_US-lessac-high.onnx en_US-lessac-high.onnx.json; do
-  curl -sSL -o voices/$f https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/$f; done
-
-npm run check          # fast check of every step, no video (~1 min)
-npm run record         # dry pass → synthesize voice → record (~10 min) → demo/output/bladisolution-demo.mp4
-npm run record:silent  # same video without voiceover
-```
-
-Demo data is reset before and after recording. Set `BASE` to record another URL, and `RESET_CMD` to use another reset command, e.g. `RESET_CMD="docker compose exec -T backend python -m app.seed --reset"`.
+---
 
 ## Testing
 
 ```bash
-cd backend && pytest                       # 15 end-to-end API journeys on SQLite
+cd backend && pytest                       # 26 API tests on SQLite
 TEST_DATABASE_URL=postgresql+psycopg://bladi:bladi@localhost:5433/bladisolution_test pytest   # same suite on Postgres
 cd frontend && npm run build && npm run lint
 ```
 
-The API suite covers: register → login → create problem (visible to others); validation and auth errors; submit solution → Latest and Top ordering; star/unstar idempotency; ranking by stars; comments, replies and notifications; follow problem → new solution → notification; support/unsupport; the municipality pipeline (403 for citizens, selected → implemented with impact); AI analysis; duplicate detection; matching and summaries; feeds, search and dashboard; reporting and moderation; collaboration requests.
-
-The full demo flow, plus mobile navigation and a crawl of every page at 1440 px and 390 px for console errors, failed requests and horizontal overflow, was run in headless Chrome during development.
+`tests/test_journeys.py` covers the original journeys (register, problems, solutions, stars, comments, notifications, supports, organization pipeline, duplicate detection, feeds, moderation, collaboration). `tests/test_campus.py` covers the Campus rules: public browsing and 401s on protected actions, no self-assigned privileged roles, optional city and minimal solutions, duplicate-submission collapse, persisted and unique stars with deterministic ranking, organization verification and interest permissions, and both migrations (including on an old-schema database).
 
 ## Project structure
 
 ```
-backend/
-  app/
-    main.py            FastAPI app, error handling, startup seeding
-    models.py          SQLAlchemy models        schemas.py   request validation
-    security.py        hashing, JWT, roles, rate limiting
-    routers/           auth, users, problems, solutions, notifications,
-                       discover (feeds/search/meta), dashboard, ai, moderation, uploads
-    services/ai/       AIService protocol, local engine, Claude provider
-    services/          events (activity + notifications), ranking, text utils
-    seed.py, seed_data.py   demo dataset
-  tests/               end-to-end API journeys
-frontend/
-  src/pages/           Home, Problems, ProblemDetail, NewProblem, NewSolution,
-                       SolutionDetail, Solutions, Discover, Map, Dashboard, Search,
-                       Profile, Settings, Notifications, Moderation, Auth
-  src/components/      layout, cards, actions (star/support/follow/share/report),
-                       comments, AI panels, map, UI primitives
-docker-compose.yml
+backend/app/
+  main.py · config.py · security.py · models.py · schemas.py · serializers.py
+  migrations.py        idempotent startup migrations
+  constants.py         domains, roles, legacy category map
+  routers/             auth, users, problems, solutions, notifications, discover, dashboard, ai, moderation, uploads
+  services/            ai/, events (activity + notifications), ranking, text
+  seed.py, seed_data.py   fictional demo dataset (opt-in)
+backend/tests/         test_journeys.py, test_campus.py, test_ai_fallback.py
+frontend/src/
+  pages/               Home, Problems, ProblemDetail, NewProblem, Solutions, SolutionDetail, NewSolution,
+                       MyActivity, Profile, Settings, Notifications, Search, Moderation, Auth
+                       (Discover, MapPage, Dashboard: deferred, not routed)
+  components/          Layout, Logo, cards, actions (star/support/share/report), comments, ui
+frontend/public/       logo, icon and favicon assets
 ```
 
-## Roadmap after the hackathon
+## Next steps
 
-Arabic and Amazigh interfaces (RTL), SMS and WhatsApp intake for citizens without smartphones, verified institution onboarding, open data exports (Open311), embeddings-based semantic search, and Redis-backed rate limiting for multi-instance deployments.
+Verified institution onboarding (for example email-domain checks for universities), Arabic, French and Amazigh interfaces (RTL), email notifications, Alembic once the schema starts changing often, Redis-backed rate limiting for multi-instance deployments, and bringing back the deferred features as real usage justifies them.

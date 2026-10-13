@@ -16,7 +16,7 @@ export function useCategory(slug: string | null | undefined): Category | undefin
 
 export function useDocumentTitle(title?: string) {
   useEffect(() => {
-    document.title = title ? `${title} · BladiSolution` : 'BladiSolution — Turn Local Problems Into Real Solutions'
+    document.title = title ? `${title} · BladiSolution Campus` : 'BladiSolution Campus — Real Problems. Collective Intelligence. Practical Solutions.'
   }, [title])
 }
 

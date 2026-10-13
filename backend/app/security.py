@@ -67,9 +67,28 @@ def get_current_user(user: User | None = Depends(get_optional_user)) -> User:
     return user
 
 
+def is_organization(user: User | None) -> bool:
+    return bool(user and user.role in ("organization", "municipality"))
+
+
+def can_decide(user: User | None) -> bool:
+    """Whether this account may act for an organization (evaluate, select, express interest).
+
+    Organization accounts are self-registered, so they only get these rights after a
+    moderator verifies them. Admins always can.
+    """
+    if user is None:
+        return False
+    if user.role == "admin":
+        return True
+    return user.role in DECISION_ROLES and user.verified
+
+
 def require_decision_maker(user: User = Depends(get_current_user)) -> User:
-    if user.role not in DECISION_ROLES:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only organizations and municipalities can do this.")
+    if not can_decide(user):
+        if is_organization(user):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Your organization account is waiting for verification by a moderator.")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only verified organizations can do this.")
     return user
 
 
@@ -113,9 +132,12 @@ limiter = RateLimiter()
 
 
 def client_key(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    # X-Forwarded-For is client-controlled unless a proxy we run overwrites it, so only
+    # trust it when the deployment says so (the bundled nginx sets it to $remote_addr).
+    if get_settings().trust_forwarded_for:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 

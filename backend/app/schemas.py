@@ -5,7 +5,16 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from .constants import CATEGORY_SLUGS, LEVELS, ORG_KINDS, PROBLEM_STATUSES, REPORT_REASONS, REPORT_TARGETS, SOLUTION_STATUSES
+from .constants import (
+    CATEGORY_SLUGS,
+    LEVELS,
+    ORG_KINDS,
+    PROBLEM_STATUSES,
+    REPORT_REASONS,
+    REPORT_TARGETS,
+    SOLUTION_STATUSES,
+    canonical_category,
+)
 
 Level = Literal["low", "medium", "high", "critical"]
 assert list(Level.__args__) == LEVELS  # type: ignore[attr-defined]
@@ -32,12 +41,15 @@ class RegisterIn(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
-    role: Literal["citizen", "talent", "organization", "municipality"] = "citizen"
+    # Individuals are "citizen" or "talent" (shown as "Community member"). Organizations
+    # register as "organization" and stay unverified until a moderator approves them.
+    role: Literal["citizen", "talent", "organization"] = "citizen"
     org_kind: str | None = None
+    affiliation: str | None = Field(default=None, max_length=160)
     city: str | None = Field(default=None, max_length=80)
     skills: list[str] = Field(default_factory=list)
 
-    @field_validator("name", "city")
+    @field_validator("name", "city", "affiliation")
     @classmethod
     def clean(cls, v):
         return _clean(v)
@@ -68,13 +80,22 @@ class ProfileUpdate(BaseModel):
     skills: list[str] | None = None
     avatar_url: str | None = Field(default=None, max_length=500)
     website: str | None = Field(default=None, max_length=255)
-    role: Literal["citizen", "talent", "organization", "municipality"] | None = None
+    affiliation: str | None = Field(default=None, max_length=160)
+    # Only applied to organization accounts. The account role itself can't be changed here:
+    # it decides permissions, so a moderator has to be involved.
     org_kind: str | None = None
 
-    @field_validator("name", "headline", "city", "bio", "website")
+    @field_validator("name", "headline", "city", "bio", "website", "affiliation")
     @classmethod
     def clean(cls, v):
         return _clean(v)
+
+    @field_validator("org_kind")
+    @classmethod
+    def valid_kind(cls, v):
+        if v and v not in ORG_KINDS:
+            raise ValueError("Unknown organization type")
+        return v or None
 
     @field_validator("skills")
     @classmethod
@@ -93,7 +114,8 @@ class ProblemIn(BaseModel):
     title: str = Field(min_length=8, max_length=160)
     description: str = Field(min_length=20, max_length=5000)
     category: str
-    city: str = Field(min_length=2, max_length=80)
+    # Optional: many problems (national, online, campus-wide) have no single city.
+    city: str | None = Field(default=None, max_length=80)
     neighborhood: str | None = Field(default=None, max_length=120)
     location: str | None = Field(default=None, max_length=200)
     lat: float | None = Field(default=None, ge=-90, le=90)
@@ -112,8 +134,9 @@ class ProblemIn(BaseModel):
     @field_validator("category")
     @classmethod
     def valid_category(cls, v):
+        v = canonical_category(v)  # accept the prototype's category slugs too
         if v not in CATEGORY_SLUGS:
-            raise ValueError("Unknown category")
+            raise ValueError("Choose a domain")
         return v
 
     @field_validator("tags")
@@ -148,10 +171,11 @@ class ProblemUpdate(BaseModel):
 
 class SolutionIn(BaseModel):
     title: str = Field(min_length=6, max_length=160)
+    # The proposed approach, in the author's words. The only long field that is required.
     description: str = Field(min_length=20, max_length=5000)
-    approach: str = Field(min_length=20, max_length=8000)
-    impact: str = Field(min_length=10, max_length=4000)
-    implementation_plan: str = Field(min_length=10, max_length=6000)
+    approach: str | None = Field(default=None, max_length=8000)
+    impact: str | None = Field(default=None, max_length=4000)
+    implementation_plan: str | None = Field(default=None, max_length=6000)
     required_skills: list[str] = Field(default_factory=list)
     resources: str | None = Field(default=None, max_length=2000)
     estimated_cost: str | None = Field(default=None, max_length=120)
@@ -186,9 +210,9 @@ class SolutionIn(BaseModel):
 class SolutionUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=6, max_length=160)
     description: str | None = Field(default=None, min_length=20, max_length=5000)
-    approach: str | None = Field(default=None, min_length=20, max_length=8000)
-    impact: str | None = Field(default=None, min_length=10, max_length=4000)
-    implementation_plan: str | None = Field(default=None, min_length=10, max_length=6000)
+    approach: str | None = Field(default=None, max_length=8000)
+    impact: str | None = Field(default=None, max_length=4000)
+    implementation_plan: str | None = Field(default=None, max_length=6000)
     required_skills: list[str] | None = None
     resources: str | None = Field(default=None, max_length=2000)
     estimated_cost: str | None = Field(default=None, max_length=120)
@@ -255,6 +279,20 @@ class ReportResolve(BaseModel):
 
 class ContactIn(BaseModel):
     message: str = Field(min_length=10, max_length=1500)
+
+
+class InterestIn(BaseModel):
+    kind: Literal["implementation", "sponsorship", "mentorship"]
+    message: str | None = Field(default=None, max_length=1500)
+
+    @field_validator("message")
+    @classmethod
+    def clean(cls, v):
+        return _clean(v) or None
+
+
+class OrgVerification(BaseModel):
+    verified: bool
 
 
 class CollaborationIn(BaseModel):

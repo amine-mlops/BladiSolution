@@ -10,6 +10,7 @@ export interface UserBrief {
   role: Role
   org_kind: string | null
   headline: string | null
+  affiliation: string | null
   city: string | null
   avatar_url: string | null
   verified: boolean
@@ -194,7 +195,21 @@ export interface SolutionDetail extends Solution {
   contributors: Contributor[]
   can_edit: boolean
   can_decide: boolean
+  can_star: boolean
+  is_organization: boolean
   my_collaboration: 'pending' | 'accepted' | 'declined' | null
+  interests: OrganizationInterest[]
+  my_interest: InterestKind | null
+}
+
+export type InterestKind = 'implementation' | 'sponsorship' | 'mentorship'
+
+export interface OrganizationInterest {
+  organization: UserBrief
+  kind: InterestKind
+  created_at: string
+  /** Only visible to the solution's author and the organization itself. */
+  message: string | null
 }
 
 export interface Comment {

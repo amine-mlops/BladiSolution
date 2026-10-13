@@ -31,21 +31,19 @@ def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)
     email = body.email.lower()
     if db.scalar(select(User.id).where(User.email == email)):
         raise HTTPException(409, "An account with this email already exists.")
-    org_kind = body.org_kind
-    if body.role == "municipality":
-        org_kind = "municipality"
-    elif body.role != "organization":
-        org_kind = None
+    is_org = body.role == "organization"
     user = User(
         email=email,
         username=unique_username(db, body.name),
         password_hash=hash_password(body.password),
         name=body.name,
         role=body.role,
-        org_kind=org_kind,
+        org_kind=(body.org_kind or "company") if is_org else None,
+        affiliation=body.affiliation,
         city=body.city,
         skills=body.skills,
-        headline={"talent": "Civic innovator", "organization": "Organization", "municipality": "Public institution"}.get(body.role),
+        # Organizations act on solutions only after a moderator verifies them.
+        verified=False,
     )
     db.add(user)
     db.commit()

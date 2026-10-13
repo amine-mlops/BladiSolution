@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..constants import CATEGORY_SLUGS
 from ..db import get_db
-from ..models import CategoryFollow, Problem, ProblemFollower, Solution, User, UserFollow
+from ..models import CategoryFollow, Problem, ProblemFollower, Solution, SolutionStar, User, UserFollow
 from ..schemas import ProfileUpdate
 from ..security import get_current_user, get_optional_user
 from ..serializers import problems_out, solutions_out, user_brief, user_private
@@ -82,7 +82,7 @@ def user_solutions(username: str, page: Page = Depends(), db: Session = Depends(
     stmt = (
         select(Solution)
         .where(Solution.author_id == u.id, Solution.is_hidden.is_(False))
-        .order_by(desc(Solution.status == "implemented"), desc(Solution.stars_count))
+        .order_by(desc(Solution.created_at), desc(Solution.id))
     )
     items, total = page.apply(db, stmt)
     return page.envelope(solutions_out(db, viewer, items), total)
@@ -91,7 +91,7 @@ def user_solutions(username: str, page: Page = Depends(), db: Session = Depends(
 @router.get("/users/{username}/problems")
 def user_problems(username: str, page: Page = Depends(), db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)):
     u = get_user_or_404(db, username)
-    stmt = select(Problem).where(Problem.author_id == u.id, Problem.is_hidden.is_(False)).order_by(desc(Problem.created_at))
+    stmt = select(Problem).where(Problem.author_id == u.id, Problem.is_hidden.is_(False)).order_by(desc(Problem.created_at), desc(Problem.id))
     items, total = page.apply(db, stmt)
     return page.envelope(problems_out(db, viewer, items), total)
 
@@ -99,14 +99,14 @@ def user_problems(username: str, page: Page = Depends(), db: Session = Depends(g
 @router.patch("/users/me")
 def update_me(body: ProfileUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     data = body.model_dump(exclude_unset=True)
-    if "role" in data and data["role"] and user.role == "admin":
-        data.pop("role")  # admins keep their role
+    # The role is not editable here (it grants permissions); org_kind only describes organizations.
+    org_kind = data.pop("org_kind", None)
+    if user.role == "organization" and org_kind:
+        user.org_kind = org_kind
     for field, value in data.items():
+        if field == "name" and not value:
+            continue
         setattr(user, field, value)
-    if user.role == "municipality":
-        user.org_kind = "municipality"
-    elif user.role not in ("organization", "municipality"):
-        user.org_kind = None
     db.commit()
     return user_private(user)
 
@@ -136,6 +136,19 @@ def unfollow_user(username: str, db: Session = Depends(get_db), user: User = Dep
         db.delete(row)
         db.commit()
     return {"following": False}
+
+
+@router.get("/me/starred")
+def my_starred(page: Page = Depends(), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Solutions the current user has starred, most recent star first."""
+    stmt = (
+        select(Solution)
+        .join(SolutionStar, SolutionStar.solution_id == Solution.id)
+        .where(SolutionStar.user_id == user.id, Solution.is_hidden.is_(False))
+        .order_by(desc(SolutionStar.created_at), desc(Solution.id))
+    )
+    items, total = page.apply(db, stmt)
+    return page.envelope(solutions_out(db, user, items), total)
 
 
 @router.get("/me/following")
